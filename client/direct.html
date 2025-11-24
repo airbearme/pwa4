@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Direct Test</title>
+</head>
+<body style="margin: 0; padding: 0;">
+    <div id="root" style="background: red; color: white; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-size: 40px; font-family: Arial;">
+        DIRECT HTML - NO VITE - If you see this RED text, your browser works!
+    </div>
+    <script>
+        console.log("Direct HTML script running!");
+        document.getElementById('root').innerHTML += '<br><br>JavaScript is WORKING!';
+    </script>
+</body>
+</html>

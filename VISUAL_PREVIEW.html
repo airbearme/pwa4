@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AirBear Preview Guide</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #e2e8f0;
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+        
+        .header h1 {
+            font-size: 3.5rem;
+            background: linear-gradient(to right, #10b981, #84cc16, #fbbf24);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 20px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        .mascot {
+            font-size: 6rem;
+            animation: bounce 2s ease-in-out infinite;
+            display: inline-block;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .preview-box {
+            background: rgba(30, 41, 59, 0.8);
+            border: 2px solid #10b981;
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 60px rgba(16, 185, 129, 0.3);
+        }
+        
+        .preview-box h2 {
+            color: #10b981;
+            font-size: 2rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .url-box {
+            background: #0f172a;
+            border: 2px solid #10b981;
+            border-radius: 10px;
+            padding: 20px;
+            font-size: 1.5rem;
+            text-align: center;
+            margin: 30px 0;
+            font-family: 'Courier New', monospace;
+            color: #10b981;
+        }
+        
+        .url-box a {
+            color: #10b981;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        
+        .url-box a:hover {
+            color: #84cc16;
+            text-shadow: 0 0 10px #10b981;
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .feature-card {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid #10b981;
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(16, 185, 129, 0.4);
+        }
+        
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+        
+        .feature-card h3 {
+            color: #10b981;
+            margin-bottom: 10px;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(to right, #10b981, #84cc16);
+            color: white;
+            padding: 20px 40px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin: 20px 10px;
+            transition: all 0.3s;
+            box-shadow: 0 10px 30px rgba(16, 185, 129, 0.4);
+        }
+        
+        .cta-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 15px 40px rgba(16, 185, 129, 0.6);
+        }
+        
+        .status {
+            display: inline-block;
+            background: #10b981;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        .instructions {
+            background: rgba(251, 191, 36, 0.1);
+            border-left: 4px solid #fbbf24;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+        }
+        
+        .instructions h3 {
+            color: #fbbf24;
+            margin-bottom: 15px;
+        }
+        
+        .instructions ol {
+            margin-left: 20px;
+            line-height: 1.8;
+        }
+        
+        .visual-demo {
+            background: #0f172a;
+            border: 2px solid #10b981;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 30px 0;
+            text-align: center;
+        }
+        
+        .spinning-wheel {
+            width: 100px;
+            height: 100px;
+            border: 8px solid #10b981;
+            border-top-color: #fbbf24;
+            border-radius: 50%;
+            animation: spin 2s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .effect-demo {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            margin: 30px 0;
+        }
+        
+        .effect-item {
+            text-align: center;
+            margin: 15px;
+        }
+        
+        .effect-visual {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 10px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+        }
+        
+        .fire { background: linear-gradient(to top, #ff0000, #ff6600, #ffaa00); }
+        .solar { background: linear-gradient(to top, #fbbf24, #f59e0b, #d97706); }
+        .eco { background: linear-gradient(to top, #10b981, #84cc16, #22c55e); }
+        .holo { background: linear-gradient(135deg, #06b6d4, #8b5cf6, #ec4899); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="mascot">🐻</div>
+            <h1>AirBear Preview</h1>
+            <p style="font-size: 1.3rem; color: #94a3b8;">Solar-Powered Eco-Ride Platform</p>
+            <p style="margin-top: 10px;"><span class="status">✅ SERVER RUNNING</span></p>
+        </div>
+        
+        <div class="preview-box">
+            <h2>🌐 Live Preview URL</h2>
+            <div class="url-box">
+                <a href="http://localhost:5000" target="_blank">http://localhost:5000</a>
+            </div>
+            <p style="text-align: center; font-size: 1.1rem; color: #94a3b8;">
+                Click the link above to open the live application in your browser
+            </p>
+        </div>
+        
+        <div class="instructions">
+            <h3>📋 How to View the Preview:</h3>
+            <ol>
+                <li><strong>Click the URL above</strong> to open in your browser</li>
+                <li>Or manually navigate to: <code style="color: #10b981;">http://localhost:5000</code></li>
+                <li>Or run this command: <code style="color: #10b981;">firefox http://localhost:5000</code></li>
+                <li>The development server is already running on port 5000</li>
+            </ol>
+        </div>
+        
+        <div class="preview-box">
+            <h2>✨ What You'll See</h2>
+            
+            <div class="visual-demo">
+                <h3 style="color: #10b981; margin-bottom: 20px;">Animated Elements</h3>
+                <div class="spinning-wheel"></div>
+                <p style="margin-top: 15px;">Spinning AirBear Wheels with Effects</p>
+            </div>
+            
+            <div class="effect-demo">
+                <div class="effect-item">
+                    <div class="effect-visual fire">🔥</div>
+                    <p>Fire Effects</p>
+                </div>
+                <div class="effect-item">
+                    <div class="effect-visual solar">☀️</div>
+                    <p>Solar Rays</p>
+                </div>
+                <div class="effect-item">
+                    <div class="effect-visual eco">🌿</div>
+                    <p>Eco Particles</p>
+                </div>
+                <div class="effect-item">
+                    <div class="effect-visual holo">✨</div>
+                    <p>Holographic</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="preview-box">
+            <h2>🎯 Key Features in the App</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🐻</div>
+                    <h3>Animated Mascot</h3>
+                    <p>Friendly bear with pilot goggles</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎡</div>
+                    <h3>Spinning Wheels</h3>
+                    <p>Fire, neon, plasma effects</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🗺️</div>
+                    <h3>Interactive Map</h3>
+                    <p>16 Binghamton locations</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🏪</div>
+                    <h3>Mobile Bodega</h3>
+                    <p>Shop during your ride</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">👕</div>
+                    <h3>CEO T-Shirt</h3>
+                    <p>$100 - Free daily rides</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📱</div>
+                    <h3>PWA Ready</h3>
+                    <p>Install as native app</p>
+                </div>
+            </div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 50px;">
+            <a href="http://localhost:5000" class="cta-button" target="_blank">
+                🚀 Open Live Preview
+            </a>
+            <a href="http://localhost:5000/map" class="cta-button" target="_blank">
+                🗺️ View Interactive Map
+            </a>
+        </div>
+        
+        <div class="preview-box" style="margin-top: 50px;">
+            <h2>📊 Server Status</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 20px;">
+                <div style="text-align: center;">
+                    <div style="font-size: 2rem; color: #10b981;">✅</div>
+                    <p><strong>Status:</strong> Running</p>
+                </div>
+                <div style="text-align: center;">
+                    <div style="font-size: 2rem; color: #10b981;">5000</div>
+                    <p><strong>Port:</strong> 5000</p>
+                </div>
+                <div style="text-align: center;">
+                    <div style="font-size: 2rem; color: #10b981;">⚡</div>
+                    <p><strong>Mode:</strong> Development</p>
+                </div>
+                <div style="text-align: center;">
+                    <div style="font-size: 2rem; color: #10b981;">🔥</div>
+                    <p><strong>Hot Reload:</strong> Enabled</p>
+                </div>
+            </div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 60px; padding: 30px; border-top: 2px solid #334155;">
+            <p style="font-size: 1.2rem; color: #94a3b8;">
+                Made with 🌱 by the AirBear team
+            </p>
+            <p style="margin-top: 10px; color: #64748b;">
+                "Zero emissions, infinite possibilities!"
+            </p>
+        </div>
+    </div>
+</body>
+</html>

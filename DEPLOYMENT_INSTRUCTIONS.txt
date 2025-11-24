@@ -1,0 +1,34 @@
+🚀 AIRBEAR PWA DEPLOYMENT GUIDE FOR FILEZILLA
+
+✅ BUILD STATUS: COMPLETE
+- Location: /home/steve/Projects/11⁄11pwa3/dist/public/
+- Files: 14 total (980KB)
+- Theme: Orange & Green UI
+- Features: PWA-enabled with offline support
+
+🔗 FILEZILLA CONNECTION:
+Host: access-5018328928.webspace-host.com
+Port: 22
+Username: a2096159
+Password: Danknugs420420
+
+📤 UPLOAD STEPS:
+1. Open FileZilla
+2. Connect with credentials above
+3. Navigate to /public_html/ (or /httpdocs/ if needed)
+4. Upload ALL files from dist/public/ folder
+5. Include entire assets/ directory
+
+📁 FILES TO UPLOAD:
+- index.html (3.80 KB)
+- manifest.json (1.05 KB)
+- sw.js (2.79 KB) - Service Worker
+- airbear-mascot.png (84.46 KB)
+- c4v-logo.svg (263 B)
+- assets/ (9 JS/CSS files)
+
+🎯 EXPECTED RESULT:
+Visit https://airbear.me after upload
+- Beautiful orange/green UI
+- PWA install prompt
+- All features working

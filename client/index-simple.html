@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AirBear - Simple Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        .container {
+            text-align: center;
+            max-width: 800px;
+            padding: 40px;
+        }
+        h1 {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            text-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        p {
+            font-size: 1.5rem;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+        .status {
+            background: rgba(255,255,255,0.2);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            margin-top: 30px;
+        }
+        .button {
+            display: inline-block;
+            background: white;
+            color: #10b981;
+            padding: 15px 40px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 600;
+            margin: 10px;
+            transition: transform 0.2s;
+        }
+        .button:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐻 AirBear</h1>
+        <p>Solar Rickshaw Ride Share</p>
+        <div class="status">
+            <h2>✅ Server is Running!</h2>
+            <p style="margin-top: 15px;">This is a simple HTML test page.</p>
+            <p>If you see this, the server works but React isn't loading.</p>
+        </div>
+        <div style="margin-top: 30px;">
+            <a href="/" class="button">Try React App</a>
+        </div>
+    </div>
+    <script>
+        console.log("Simple HTML page loaded successfully!");
+    </script>
+</body>
+</html>
