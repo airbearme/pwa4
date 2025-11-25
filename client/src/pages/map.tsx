@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,22 +8,17 @@ import { useToast } from "@/hooks/use-toast";
 import RickshawWheel from "@/components/airbear-wheel";
 import LoadingSpinner from "@/components/loading-spinner";
 import { 
-  spots,
-  getRouteDistance,
   estimateRideFare, 
   estimateRideTime,
-  getActiveSpots
+  getActiveSpots,
 } from "@/lib/spots";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import AirbearAvatar from "@/components/airbear-avatar";
 import { 
   MapPin, 
-  Navigation, 
   Battery, 
-  Store, 
   Clock,
-  Zap,
-  Plus,
-  Minus,
-  Users
 } from "lucide-react";
 
 declare global {
@@ -35,9 +30,9 @@ declare global {
 interface Spot {
   id: string;
   name: string;
-  latitude: number;
-  longitude: number;
-  isActive: boolean;
+  latitude: number | string;
+  longitude: number | string;
+  isActive?: boolean;
 }
 
 interface Rickshaw {
@@ -47,6 +42,26 @@ interface Rickshaw {
   isAvailable: boolean;
   isCharging: boolean;
 }
+
+const calculateDistanceKm = (from: Spot, to: Spot): number | null => {
+  const lat1 = Number(from.latitude);
+  const lon1 = Number(from.longitude);
+  const lat2 = Number(to.latitude);
+  const lon2 = Number(to.longitude);
+
+  if ([lat1, lon1, lat2, lon2].some((val) => Number.isNaN(val))) return null;
+
+  const toRadians = (degrees: number) => degrees * (Math.PI / 180);
+  const R = 6371;
+  const dLat = toRadians(lat2 - lat1);
+  const dLon = toRadians(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
 
 export default function Map() {
   const { toast } = useToast();
@@ -58,27 +73,82 @@ export default function Map() {
   const [mapReady, setMapReady] = useState(false);
   const [mapLoading, setMapLoading] = useState(true);
 
-  // Use static data instead of API calls
-  const spotsData = getActiveSpots();
-  
-  // Create mock rickshaw data for demo purposes
-  const mockRickshaws: Rickshaw[] = spotsData.slice(0, 6).map((spot, index) => ({
-    id: `rickshaw-${index}`,
-    currentSpotId: spot.id,
-    batteryLevel: Math.floor(Math.random() * 50) + 50, // 50-100%
-    isAvailable: Math.random() > 0.3, // 70% chance available
-    isCharging: Math.random() > 0.8 // 20% chance charging
-  }));
+  const { data: spotsData = [], isLoading: spotsLoading, error: spotsError } = useQuery<Spot[]>({
+    queryKey: ["spots"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/spots");
+      const data = await response.json();
+      return (data || []).map((spot: any) => ({
+        ...spot,
+        latitude: Number(spot.latitude ?? spot.lat ?? spot.latitide),
+        longitude: Number(spot.longitude ?? spot.lng ?? spot.long ?? spot.lon),
+        isActive: spot.isActive ?? spot.is_active ?? true,
+      }));
+    },
+    retry: 1,
+  });
 
-  const rickshaws = mockRickshaws;
+  const { data: rickshawsData = [], isLoading: rickshawLoading, error: rickshawError } = useQuery<Rickshaw[]>({
+    queryKey: ["airbears"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/rickshaws");
+      const data = await response.json();
+      return (data || []).map((item: any) => ({
+        id: item.id,
+        currentSpotId: item.currentSpotId ?? item.current_spot_id ?? item.currentspotid ?? "",
+        batteryLevel: Number(item.batteryLevel ?? item.battery_level ?? 100),
+        isAvailable: item.isAvailable ?? item.is_available ?? false,
+        isCharging: item.isCharging ?? item.is_charging ?? false,
+      }));
+    },
+    refetchInterval: 15000,
+    retry: 1,
+  });
+
+  const activeSpots = useMemo(() => {
+    if (spotsData.length > 0) {
+      return spotsData.filter((spot) => spot.isActive !== false);
+    }
+    if (spotsError) {
+      // Fallback to bundled spot list for static deployments
+      return getActiveSpots();
+    }
+    return [];
+  }, [spotsData, spotsError]);
+
+  const rickshaws = useMemo(() => {
+    if (rickshawsData.length > 0) return rickshawsData;
+    if (rickshawError && activeSpots.length) {
+      // Generate a lightweight fallback set tied to available spots
+      return activeSpots.slice(0, 6).map((spot, index) => ({
+        id: `fallback-${spot.id}-${index}`,
+        currentSpotId: spot.id,
+        batteryLevel: 80 - index * 5,
+        isAvailable: index % 3 !== 0,
+        isCharging: index % 5 === 0,
+      }));
+    }
+    return [];
+  }, [rickshawsData, rickshawError, activeSpots]);
   const availableAirbearsCount = rickshaws.filter(r => r.isAvailable).length;
+
+  useEffect(() => {
+    if (spotsError || rickshawError) {
+      toast({
+        title: "Live map unavailable",
+        description: "Using offline map data. Live API unreachable; check your backend/Supabase settings for real-time data.",
+        variant: "destructive",
+      });
+    }
+  }, [spotsError, rickshawError, toast]);
 
   // Initialize Leaflet map
   useEffect(() => {
-    if (!mapRef.current || mapReady || mapLoading) return;
+    if (!mapRef.current || mapReady) return;
 
     const initMap = async () => {
       try {
+        setMapLoading(true);
         // Load Leaflet from CDN
         if (!window.L) {
           // Create and append Leaflet CSS
@@ -140,11 +210,11 @@ export default function Map() {
         mapInstanceRef.current.remove();
       }
     };
-  }, [mapReady, mapLoading, toast]);
+  }, [mapReady, toast]);
 
   // Add markers to map
   useEffect(() => {
-    if (!mapInstanceRef.current || !spotsData || !rickshaws || !mapReady) return;
+    if (!mapInstanceRef.current || !activeSpots || !rickshaws || !mapReady) return;
 
     const map = mapInstanceRef.current;
     
@@ -156,16 +226,21 @@ export default function Map() {
     });
 
     // Add spot markers
-    spotsData.forEach((spot: Spot, index: number) => {
-      const availableAirbears = rickshaws.filter(r => r.currentSpotId === spot.id && r.isAvailable);
-      const hasAirbears = availableAirbears.length > 0;
-      const spotNumber = index + 1;
-      
-      // Create marker color based on availability
-      const markerColor = hasAirbears ? '#10b981' : '#6b7280'; // Green if available, gray if not
-      
-      // Create circle marker for better performance and appearance
-      const marker = window.L.circleMarker([spot.latitude, spot.longitude], {
+    activeSpots.forEach((spot: Spot, index: number) => {
+        const availableAirbears = rickshaws.filter(r => r.currentSpotId === spot.id && r.isAvailable);
+        const hasAirbears = availableAirbears.length > 0;
+        const spotNumber = index + 1;
+        const latitude = Number(spot.latitude);
+        const longitude = Number(spot.longitude);
+        if (Number.isNaN(latitude) || Number.isNaN(longitude)) {
+          return;
+        }
+        
+        // Create marker color based on availability
+        const markerColor = hasAirbears ? '#10b981' : '#6b7280'; // Green if available, gray if not
+        
+        // Create circle marker for better performance and appearance
+        const marker = window.L.circleMarker([latitude, longitude], {
         radius: hasAirbears ? 12 : 8,
         fillColor: markerColor,
         color: '#ffffff',
@@ -245,14 +320,14 @@ export default function Map() {
 
     // Global function for booking
     (window as any).selectSpotForRide = (spotId: string) => {
-      const spot = spotsData.find(s => s.id === spotId);
+      const spot = activeSpots.find(s => s.id === spotId);
       if (spot) {
         setSelectedSpot(spot);
         setShowBookingDialog(true);
       }
     };
 
-  }, [spotsData, rickshaws, mapReady]);
+  }, [activeSpots, rickshaws, mapReady]);
 
   const handleBookRide = () => {
     if (!selectedSpot || !selectedDestination) {
@@ -264,7 +339,7 @@ export default function Map() {
       return;
     }
 
-    const distance = getRouteDistance(selectedSpot.id, selectedDestination.id) || 0;
+    const distance = calculateDistanceKm(selectedSpot, selectedDestination) || 0;
     const fare = estimateRideFare(distance);
     
     toast({
@@ -277,12 +352,15 @@ export default function Map() {
     setSelectedDestination(null);
   };
 
-  if (mapLoading) {
+  if (mapLoading || spotsLoading || rickshawLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <LoadingSpinner size="lg" text="Loading map..." />
-          <p className="mt-4 text-muted-foreground">Setting up your AirBear adventure...</p>
+          <p className="mt-4 text-muted-foreground flex items-center justify-center gap-2">
+            <AirbearAvatar size="sm" showBadge={false} />
+            Setting up your AirBear adventure...
+          </p>
         </div>
       </div>
     );
@@ -302,13 +380,8 @@ export default function Map() {
             Find Your <span className="text-primary">Perfect Ride</span>
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Discover all {spotsData.length} AirBear spots across Binghamton with real-time availability
+            Discover all {activeSpots.length} AirBear spots across Binghamton with real-time availability
           </p>
-          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg inline-block">
-            <p className="text-blue-700 text-sm">
-              🌍 <strong>Demo Mode:</strong> This shows mock availability data. In production, this would connect to real-time AirBear tracking.
-            </p>
-          </div>
         </motion.div>
 
         {/* Status Info */}
@@ -325,7 +398,7 @@ export default function Map() {
             </div>
             <div className="hidden sm:flex items-center space-x-4 text-sm text-emerald-600">
               <span>🟢 {availableAirbearsCount} AirBears Available</span>
-              <span>📍 {spotsData.length} Active Spots</span>
+              <span>📍 {activeSpots.length} Active Spots</span>
               <span>🌱 100% Solar Powered</span>
             </div>
           </div>
@@ -383,6 +456,10 @@ export default function Map() {
               <div className="w-4 h-4 bg-gray-400 rounded-full"></div>
               <span className="font-medium">No Availability</span>
             </div>
+            <div className="flex items-center space-x-2 bg-card/60 rounded-lg px-4 py-2 border">
+              <AirbearAvatar size="sm" showBadge={false} />
+              <span className="font-medium">AirBear mini-rickshaw marker</span>
+            </div>
           </div>
         </motion.div>
 
@@ -393,7 +470,7 @@ export default function Map() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
         >
-          {spotsData.map((spot: Spot, index: number) => {
+          {activeSpots.map((spot: Spot, index: number) => {
             const availableAirbears = rickshaws.filter(r => r.currentSpotId === spot.id && r.isAvailable);
             const avgBattery = availableAirbears.length > 0 
               ? Math.round(availableAirbears.reduce((sum, r) => sum + r.batteryLevel, 0) / availableAirbears.length)
@@ -498,7 +575,7 @@ export default function Map() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Destination</label>
                 <div className="max-h-40 overflow-y-auto space-y-1">
-                  {spotsData.filter(s => s.id !== selectedSpot?.id).map((spot) => (
+                  {activeSpots.filter(s => s.id !== selectedSpot?.id).map((spot) => (
                     <div
                       key={spot.id}
                       className={`p-3 rounded-lg cursor-pointer transition-colors ${
@@ -522,7 +599,7 @@ export default function Map() {
               {selectedDestination && (
                 <div className="p-4 bg-muted/10 rounded-lg space-y-2">
                   {(() => {
-                    const distance = selectedSpot ? getRouteDistance(selectedSpot.id, selectedDestination.id) : null;
+                    const distance = selectedSpot ? calculateDistanceKm(selectedSpot, selectedDestination) : null;
                     const time = distance ? estimateRideTime(distance) : 0;
                     const fare = distance ? estimateRideFare(distance) : 0;
                     return (

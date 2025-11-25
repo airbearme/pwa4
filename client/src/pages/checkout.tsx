@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,8 +22,9 @@ import {
   Zap
 } from "lucide-react";
 
-const STRIPE_KEY = import.meta.env.VITE_STRIPE_PUBLIC_KEY || 'pk_test_mock_key_1234567890';
-const stripePromise = loadStripe(STRIPE_KEY);
+import { getStripe, processApplePayPayment, processGooglePayPayment } from "@/lib/stripe";
+
+const stripePromise = getStripe();
 
 interface CheckoutFormProps {
   clientSecret: string;
@@ -114,6 +114,7 @@ export default function Checkout() {
   const [clientSecret, setClientSecret] = useState("");
   const [qrCode, setQrCode] = useState("");
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [walletLoading, setWalletLoading] = useState({ apple: false, google: false });
 
   // Sample order data - in real app this would come from cart/order context
   const orderData = {
@@ -175,6 +176,78 @@ export default function Checkout() {
     setTimeout(() => {
       window.location.href = "/dashboard";
     }, 3000);
+  };
+
+  const handleApplePay = async () => {
+    try {
+      setWalletLoading((prev) => ({ ...prev, apple: true }));
+      const result = await processApplePayPayment({
+        amount: orderData.total,
+        currency: "usd",
+        orderId: orderData.orderId,
+        rideId: orderData.rideId,
+        paymentMethod: "apple_pay",
+      });
+
+      if (!result.success) {
+        toast({
+          title: "Apple Pay failed",
+          description: result.error || "Apple Pay is unavailable on this device.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Apple Pay authorized",
+        description: "Payment confirmed. Thank you!",
+      });
+      handlePaymentSuccess();
+    } catch (error: any) {
+      toast({
+        title: "Apple Pay error",
+        description: error.message || "Could not start Apple Pay.",
+        variant: "destructive",
+      });
+    } finally {
+      setWalletLoading((prev) => ({ ...prev, apple: false }));
+    }
+  };
+
+  const handleGooglePay = async () => {
+    try {
+      setWalletLoading((prev) => ({ ...prev, google: true }));
+      const result = await processGooglePayPayment({
+        amount: orderData.total,
+        currency: "usd",
+        orderId: orderData.orderId,
+        rideId: orderData.rideId,
+        paymentMethod: "google_pay",
+      });
+
+      if (!result.success) {
+        toast({
+          title: "Google Pay failed",
+          description: result.error || "Google Pay is unavailable on this device.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Google Pay authorized",
+        description: "Payment confirmed. Thank you!",
+      });
+      handlePaymentSuccess();
+    } catch (error: any) {
+      toast({
+        title: "Google Pay error",
+        description: error.message || "Could not start Google Pay.",
+        variant: "destructive",
+      });
+    } finally {
+      setWalletLoading((prev) => ({ ...prev, google: false }));
+    }
   };
 
   if (!user) {
@@ -343,21 +416,25 @@ export default function Checkout() {
                       <Button 
                         variant="outline" 
                         className="h-16 border-2 hover:border-primary hover:bg-primary/5"
+                        onClick={handleApplePay}
+                        disabled={walletLoading.apple}
                         data-testid="button-apple-pay"
                       >
                         <div className="text-center">
                           <Apple className="h-6 w-6 mx-auto mb-1" />
-                          <span className="text-sm">Apple Pay</span>
+                          <span className="text-sm">{walletLoading.apple ? "Requesting..." : "Apple Pay"}</span>
                         </div>
                       </Button>
                       <Button 
                         variant="outline" 
                         className="h-16 border-2 hover:border-primary hover:bg-primary/5"
+                        onClick={handleGooglePay}
+                        disabled={walletLoading.google}
                         data-testid="button-google-pay"
                       >
                         <div className="text-center">
                           <Wallet className="h-6 w-6 mx-auto mb-1" />
-                          <span className="text-sm">Google Pay</span>
+                          <span className="text-sm">{walletLoading.google ? "Requesting..." : "Google Pay"}</span>
                         </div>
                       </Button>
                     </div>

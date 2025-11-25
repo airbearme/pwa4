@@ -14,7 +14,7 @@ import { Eye, EyeOff, Mail, Lock, User, Sparkles } from "lucide-react";
 
 export default function Auth() {
   const [, navigate] = useLocation();
-  const { login, register, loginWithOAuth, isLoading } = useAuth();
+  const { login, register, loginWithOAuth, isLoading, user } = useAuth();
   const { toast } = useToast();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [showPassword, setShowPassword] = useState(false);
@@ -34,6 +34,12 @@ export default function Auth() {
       setMode("signup");
     }
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      navigate("/dashboard");
+    }
+  }, [user, navigate]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -176,7 +182,7 @@ export default function Auth() {
           </motion.div>
           
           <h2 className="text-3xl font-bold text-foreground">
-            Welcome to <span className="eco-gradient bg-clip-text text-transparent">AirBear</span>
+            Welcome to <span className="eco-gradient bg-clip-text text-transparent text-outline-strong">AirBear</span>
           </h2>
           <p className="mt-2 text-muted-foreground">
             Join the sustainable transportation revolution

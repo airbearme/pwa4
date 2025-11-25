@@ -2,43 +2,90 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import Stripe from "stripe";
 import { storage } from "./storage";
-import { insertRideSchema, insertOrderSchema, insertPaymentSchema, insertUserSchema } from "@shared/schema";
+import { insertRideSchema, insertOrderSchema, insertPaymentSchema } from "@shared/schema";
 import { z } from "zod";
+import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js";
 
-// Mock Stripe client when no API key is provided
-const isMockMode = !process.env.STRIPE_SECRET_KEY;
-const stripe = isMockMode ? {
-  paymentIntents: {
-    create: async () => ({
-      id: 'mock_pi_' + Math.random().toString(36).substring(2, 15),
-      client_secret: 'mock_cs_' + Math.random().toString(36).substring(2, 15),
-      status: 'succeeded',
-      amount: 1000, // $10.00
-      currency: 'usd'
-    })
-  },
-  // Add other Stripe methods as needed
-} as unknown as Stripe : new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+if (!stripeSecretKey) {
+  throw new Error("STRIPE_SECRET_KEY is required for live Stripe, Apple Pay, and Google Pay.");
+}
+
+const stripe = new Stripe(stripeSecretKey, {
   apiVersion: "2025-08-27.basil",
 });
 
-if (isMockMode) {
-  console.warn('⚠️  Running in mock mode. No real Stripe transactions will be processed.');
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseAdmin = supabaseUrl && supabaseServiceRoleKey
+  ? createSupabaseAdminClient(supabaseUrl, supabaseServiceRoleKey, { auth: { autoRefreshToken: false } })
+  : null;
+
+if (!supabaseAdmin) {
+  console.warn("⚠️ Supabase admin client not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY for live auth.");
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
+  const profileSchema = z.object({
+    email: z.string().email(),
+    username: z.string().min(2),
+    fullName: z.string().optional().nullable(),
+    role: z.enum(["user", "driver", "admin"]).optional(),
+    avatarUrl: z.string().url().optional().nullable(),
+  });
+
+  const ensureUserProfile = async (payload: z.infer<typeof profileSchema>) => {
+    const existingUser = await storage.getUserByEmail(payload.email);
+    if (existingUser) {
+      return storage.updateUser(existingUser.id, {
+        username: payload.username,
+        fullName: payload.fullName ?? null,
+        avatarUrl: payload.avatarUrl ?? null,
+        role: payload.role || existingUser.role,
+      });
+    }
+
+    return storage.createUser({
+      email: payload.email,
+      username: payload.username,
+      fullName: payload.fullName ?? null,
+      avatarUrl: payload.avatarUrl ?? null,
+      role: payload.role || "user",
+      ecoPoints: 0,
+      totalRides: 0,
+      co2Saved: "0",
+    });
+  };
+
   app.post("/api/auth/register", async (req, res) => {
     try {
-      const userData = insertUserSchema.parse(req.body);
-      const existingUser = await storage.getUserByEmail(userData.email);
-      
-      if (existingUser) {
-        return res.status(400).json({ message: "User already exists" });
+      if (!supabaseAdmin) {
+        return res.status(500).json({ message: "Supabase is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY." });
       }
 
-      const user = await storage.createUser(userData);
-      res.json({ user: { id: user.id, email: user.email, username: user.username, role: user.role } });
+      const userData = profileSchema.extend({ password: z.string().min(6) }).parse(req.body);
+      const { data, error } = await supabaseAdmin.auth.admin.createUser({
+        email: userData.email,
+        password: userData.password,
+        email_confirm: true,
+        user_metadata: {
+          username: userData.username,
+          role: userData.role || "user",
+          fullName: userData.fullName,
+        },
+      });
+
+      if (error) throw error;
+      const profile = await ensureUserProfile({
+        email: userData.email,
+        username: userData.username,
+        fullName: userData.fullName,
+        role: (data.user?.user_metadata?.role as "user" | "driver" | "admin") || userData.role || "user",
+        avatarUrl: null,
+      });
+
+      res.json({ user: { id: profile.id, email: profile.email, username: profile.username, role: profile.role } });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
@@ -46,14 +93,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/auth/login", async (req, res) => {
     try {
-      const { email } = req.body;
-      const user = await storage.getUserByEmail(email);
-      
-      if (!user) {
-        return res.status(401).json({ message: "User not found" });
+      if (!supabaseAdmin) {
+        return res.status(500).json({ message: "Supabase is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY." });
       }
 
-      res.json({ user: { id: user.id, email: user.email, username: user.username, role: user.role } });
+      const { email, password } = z.object({
+        email: z.string().email(),
+        password: z.string().min(6),
+      }).parse(req.body);
+
+      const { data, error } = await supabaseAdmin.auth.signInWithPassword({ email, password });
+      if (error || !data.user) {
+        return res.status(401).json({ message: error?.message || "Invalid credentials" });
+      }
+
+      const profile = await ensureUserProfile({
+        email,
+        username: (data.user.user_metadata?.username as string) || email.split("@")[0],
+        fullName: (data.user.user_metadata?.fullName as string | undefined) || null,
+        role: (data.user.user_metadata?.role as "user" | "driver" | "admin" | undefined) || "user",
+        avatarUrl: (data.user.user_metadata?.avatar_url as string | undefined) || null,
+      });
+
+      res.json({ user: { id: profile.id, email: profile.email, username: profile.username, role: profile.role } });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/auth/sync-profile", async (req, res) => {
+    try {
+      if (!supabaseAdmin) {
+        return res.status(500).json({ message: "Supabase is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY." });
+      }
+
+      const payload = profileSchema.parse(req.body);
+      const profile = await ensureUserProfile(payload);
+      res.json({ user: profile });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }

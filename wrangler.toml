@@ -1,0 +1,18 @@
+name = "airbear"
+main = "functions/_middleware.js"
+compatibility_date = "2023-10-16"
+
+[build]
+  command = "npm run build"
+  publish = "dist/public"
+
+[build.upload]
+  format = "service-worker"
+
+[env.production]
+name = "airbear"
+route = "airbear.me/*"
+
+[env.preview]
+name = "airbear-preview"
+route = "preview.airbear.me/*"

@@ -528,6 +528,12 @@
   background: linear-gradient(135deg, var(--emerald-700), var(--lime-400), var(--amber-500));
 }
 
+.text-outline-strong {
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.45),
+    0 0 12px rgba(0, 0, 0, 0.28);
+}
+
 .particle-system {
   position: absolute;
   width: 100%;

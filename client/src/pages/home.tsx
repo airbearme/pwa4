@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import AirbearWheel from "@/components/airbear-wheel";
 import EcoImpact from "@/components/eco-impact";
 import CeoTshirtPromo from "@/components/ceo-tshirt-promo";
+import AirbearAvatar from "@/components/airbear-avatar";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Crown } from "lucide-react";
@@ -69,13 +70,25 @@ export default function Home() {
             />
           </motion.div>
 
+          {/* Mini rickshaw avatars */}
+          <motion.div
+            className="flex items-center justify-center gap-4 mb-6"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+          >
+            <AirbearAvatar size="sm" />
+            <AirbearAvatar size="md" />
+            <AirbearAvatar size="sm" className="scale-90" />
+          </motion.div>
+
           <motion.h1 
             className="text-4xl sm:text-6xl lg:text-7xl font-bold mb-6 relative"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
           >
-            <span className="bg-gradient-to-r from-emerald-600 via-lime-500 to-amber-500 bg-clip-text text-transparent animate-pulse-glow airbear-holographic">
+            <span className="bg-gradient-to-r from-emerald-600 via-lime-500 to-amber-500 bg-clip-text text-transparent animate-pulse-glow airbear-holographic text-outline-strong">
               AirBear Mobile Bodega
             </span>
             <br />

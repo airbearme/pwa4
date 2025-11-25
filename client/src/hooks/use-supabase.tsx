@@ -1,5 +1,6 @@
 import { createContext, useContext, ReactNode, useMemo } from "react";
-import { createClient, type RealtimeChannel, type SupabaseClient } from "@supabase/supabase-js";
+import { type RealtimeChannel, type SupabaseClient } from "@supabase/supabase-js";
+import { getSupabaseClient } from "@/lib/supabase-client";
 
 interface SupabaseContextType {
   subscribeToRides: (callback: (payload: any) => void) => () => void;
@@ -13,16 +14,7 @@ interface SupabaseContextType {
 
 const SupabaseContext = createContext<SupabaseContextType | undefined>(undefined);
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn("Supabase env vars missing (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY). Real-time features will be disabled.");
-}
-
-const supabase: SupabaseClient | null = supabaseUrl && supabaseAnonKey
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null;
+const supabase: SupabaseClient | null = getSupabaseClient(false);
 
 let presenceChannel: RealtimeChannel | null = null;
 let onlineUsersCache: string[] = [];

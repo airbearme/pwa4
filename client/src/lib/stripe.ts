@@ -1,8 +1,16 @@
 import { loadStripe, Stripe } from '@stripe/stripe-js';
 
-const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY || 'pk_test_mock_key_1234567890';
+const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
 
-let stripePromise: Promise<Stripe | null>;
+if (!stripePublicKey) {
+  throw new Error("VITE_STRIPE_PUBLIC_KEY is required for live Stripe / Apple Pay / Google Pay.");
+}
+
+if (stripePublicKey.startsWith("pk_test")) {
+  console.warn("⚠️ Stripe is running with a test key. Use a live pk_live key for production.");
+}
+
+let stripePromise: Promise<Stripe | null> | null = null;
 
 export const getStripe = () => {
   if (!stripePromise) {
@@ -122,6 +130,14 @@ export const processApplePayPayment = async (data: PaymentIntentData): Promise<P
       return paymentIntent;
     }
 
+    const clientSecret =
+      paymentIntent.paymentIntent.clientSecret ||
+      paymentIntent.paymentIntent.client_secret;
+
+    if (!clientSecret) {
+      return { success: false, error: "Missing client secret from Stripe." };
+    }
+
     // Initialize Apple Pay payment request
     const paymentRequest = stripe.paymentRequest({
       country: 'US',
@@ -146,7 +162,7 @@ export const processApplePayPayment = async (data: PaymentIntentData): Promise<P
     return new Promise((resolve) => {
       paymentRequest.on('paymentmethod', async (event) => {
         const { error } = await stripe.confirmCardPayment(
-          paymentIntent.paymentIntent.clientSecret,
+          clientSecret,
           {
             payment_method: event.paymentMethod.id,
           }
@@ -202,6 +218,14 @@ export const processGooglePayPayment = async (data: PaymentIntentData): Promise<
       return paymentIntent;
     }
 
+    const clientSecret =
+      paymentIntent.paymentIntent.clientSecret ||
+      paymentIntent.paymentIntent.client_secret;
+
+    if (!clientSecret) {
+      return { success: false, error: "Missing client secret from Stripe." };
+    }
+
     // Initialize Google Pay payment request
     const paymentRequest = stripe.paymentRequest({
       country: 'US',
@@ -226,7 +250,7 @@ export const processGooglePayPayment = async (data: PaymentIntentData): Promise<
     return new Promise((resolve) => {
       paymentRequest.on('paymentmethod', async (event) => {
         const { error } = await stripe.confirmCardPayment(
-          paymentIntent.paymentIntent.clientSecret,
+          clientSecret,
           {
             payment_method: event.paymentMethod.id,
           }

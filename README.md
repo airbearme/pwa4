@@ -115,8 +115,15 @@ npm start
 
 ### Environment Variables
 ```env
-# Stripe Configuration
-STRIPE_SECRET_KEY=sk_test_...
+# Supabase Auth (required for email + Google/Apple login)
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
+
+# Stripe (live keys only - no demo fallback)
+VITE_STRIPE_PUBLIC_KEY=pk_live_...
+STRIPE_SECRET_KEY=sk_live_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 
 # Database (Optional - uses in-memory for development)
@@ -148,6 +155,8 @@ PORT=5000
    - Create a deployment package
    - Upload to your IONOS SFTP server
    - Verify PWA features
+
+   To push to `airbear.me`, set your IONOS `.env` values (host/user/password) and ensure the build includes the live Supabase + Stripe keys above.
 
 3. **Access Your Live App**:
    - Visit `https://your-domain.com` (replace with your IONOS domain)
