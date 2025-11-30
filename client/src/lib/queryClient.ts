@@ -1,4 +1,7 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { mockApi } from '@/lib/mock-api';
+
+const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API === 'true';
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -12,6 +15,15 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  if (USE_MOCK_API) {
+    if (method === 'GET') {
+      return mockApi.get(url);
+    }
+    if (method === 'POST') {
+      return mockApi.post(url, data);
+    }
+  }
+
   const res = await fetch(url, {
     method,
     headers: data ? { "Content-Type": "application/json" } : {},

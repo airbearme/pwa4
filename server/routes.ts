@@ -12,7 +12,7 @@ if (!stripeSecretKey) {
 }
 
 const stripe = new Stripe(stripeSecretKey, {
-  apiVersion: "2025-08-27.basil",
+  apiVersion: "2024-06-20",
 });
 
 const supabaseUrl = process.env.SUPABASE_URL;
