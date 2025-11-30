@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { renderToString } from "react-dom/server";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -239,15 +240,40 @@ export default function Map() {
         // Create marker color based on availability
         const markerColor = hasAirbears ? '#10b981' : '#6b7280'; // Green if available, gray if not
         
-        // Create circle marker for better performance and appearance
-        const marker = window.L.circleMarker([latitude, longitude], {
-        radius: hasAirbears ? 12 : 8,
-        fillColor: markerColor,
-        color: '#ffffff',
-        weight: 2,
-        opacity: 1,
-        fillOpacity: 0.8,
-      }).addTo(map);
+        const iconHtml = renderToString(
+          <AirbearAvatar
+            size="sm"
+            showBadge={false}
+            className={`
+              transition-all duration-300
+              ${hasAirbears ? 'shadow-lg shadow-green-500/50 scale-110' : 'opacity-50 grayscale'}
+            `}
+          />
+        );
+
+        const marker = window.L.marker([latitude, longitude], {
+          icon: new window.L.DivIcon({
+            html: iconHtml,
+            className: 'bg-transparent border-0',
+            iconSize: [48, 48],
+            iconAnchor: [24, 48],
+            popupAnchor: [0, -48]
+          }),
+        }).addTo(map);
+
+        if (hasAirbears) {
+          const pulsingIcon = window.L.circleMarker([latitude, longitude], {
+            radius: 25,
+            fillColor: '#10b981',
+            fillOpacity: 0.3,
+            color: '#10b981',
+            weight: 1,
+            opacity: 0.5,
+          }).addTo(map);
+
+          // Add a pulsing animation using CSS
+          pulsingIcon.getElement().style.animation = 'pulse 2s infinite';
+        }
 
       // Add popup
       const popupContent = `
