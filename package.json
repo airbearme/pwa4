@@ -11,7 +11,8 @@
     "deploy:ionos": "node scripts/deploy-ionos.js",
     "deploy:public": "node scripts/deploy-public.js",
     "check": "tsc",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "test:e2e": "wait-on http://localhost:5000 && npx playwright test"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",
@@ -75,7 +76,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20251125.0",
+    "@playwright/test": "^1.45.0",
     "@tailwindcss/typography": "^0.5.15",
     "@types/express": "4.17.21",
     "@types/node": "^20.19.0",
@@ -85,12 +86,12 @@
     "dotenv": "^17.2.3",
     "drizzle-kit": "^0.31.5",
     "esbuild": "^0.25.0",
-    "ftp": "^0.3.10",
-    "ssh2-sftp-client": "^12.0.1",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.19.1",
     "typescript": "5.6.3",
-    "vite": "^7.1.9"
+    "vite": "^7.1.9",
+    "vite-plugin-pwa": "^1.2.0",
+    "wait-on": "^7.2.0"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"

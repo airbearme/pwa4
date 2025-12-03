@@ -1,15 +1,12 @@
+
 import express, { type Express } from "express";
 import fs from "fs";
 import path from "path";
-import { createServer as createViteServer, createLogger } from "vite";
+import { createServer as createViteServer } from "vite";
 import { type Server } from "http";
-import viteConfig from "../vite.config";
-import { nanoid } from "nanoid";
 import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-const viteLogger = createLogger();
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -26,46 +23,24 @@ export async function setupVite(app: Express, server: Server) {
   console.log("Setting up Vite...");
   
   const vite = await createViteServer({
-    ...viteConfig,
-    configFile: false,
-    customLogger: {
-      ...viteLogger,
-      error: (msg, options) => {
-        console.error("Vite error:", msg);
-        viteLogger.error(msg, options);
-      },
-    },
-    appType: "custom",
+    server: { middlewareMode: true },
+    appType: 'spa', // Let Vite handle SPA fallbacks
+    root: path.resolve(__dirname, '..', 'client'),
+    configFile: path.resolve(__dirname, '..', 'vite.config.ts'),
   });
 
+  // Use vite's connect instance as middleware.
   app.use(vite.middlewares);
-  console.log("Vite middlewares added");
-  
-  app.use("*", async (req, res, next) => {
-    const url = req.originalUrl;
 
-    try {
-      const clientTemplate = path.resolve(
-        __dirname,
-        "..",
-        "client",
-        "index.html",
-      );
-
-      let template = await fs.promises.readFile(clientTemplate, "utf-8");
-      template = template.replace(
-        `src="/src/main.tsx"`,
-        `src="/src/main.tsx?v=${nanoid()}"`,
-      );
-      
-      const page = await vite.transformIndexHtml(url, template);
-      res.status(200).set({ "Content-Type": "text/html" }).end(page);
-    } catch (e: any) {
-      console.error("Error processing request:", e.message);
-      vite.ssrFixStacktrace(e as Error);
-      next(e);
+  // Handle WebSocket upgrades for HMR
+  server.on('upgrade', (req, socket, head) => {
+    // Ensure the request is meant for the Vite WS server
+    if (req.headers['upgrade'] === 'websocket') {
+      vite.ws.handleUpgrade(req, socket, head);
     }
   });
+
+  console.log("Vite middlewares and WebSocket proxy enabled.");
 }
 
 export function serveStatic(app: Express) {
