@@ -2,12 +2,35 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 import { fileURLToPath } from "url";
+import { VitePWA } from 'vite-plugin-pwa';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   plugins: [
     react(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['airbear-mascot.png', 'c4v-logo.svg'],
+      manifest: {
+        name: 'AirBear',
+        short_name: 'AirBear',
+        description: 'Solar-Powered Eco-Ride Platform',
+        theme_color: '#ffffff',
+        icons: [
+          {
+            src: 'airbear-mascot.png',
+            sizes: '192x192',
+            type: 'image/png'
+          },
+          {
+            src: 'airbear-mascot.png',
+            sizes: '512x512',
+            type: 'image/png'
+          }
+        ]
+      }
+    })
   ],
   resolve: {
     alias: {
