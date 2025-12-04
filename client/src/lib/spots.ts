@@ -233,9 +233,7 @@ export const getRouteDistance = (spot1Id: string, spot2Id: string): number | nul
 };
 
 export const estimateRideFare = (distance: number): number => {
-  const baseFare = 5.00; // Base fare in USD
-  const perKmRate = 2.50; // Rate per kilometer
-  return Math.round((baseFare + (distance * perKmRate)) * 100) / 100;
+  return 4.00;
 };
 
 export const estimateRideTime = (distance: number): number => {

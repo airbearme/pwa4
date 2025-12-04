@@ -119,4 +119,6 @@ Thumbs.db
 *.sqlite
 
 # Secrets
-secrets/
+secrets/playwright-report/
+\n# Test reports\nplaywright-report/
+\n# Test results\ntest-results/
