@@ -44,7 +44,8 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  const distPath = path.resolve(__dirname, "public");
+  const distPath = path.resolve(process.cwd(), "dist", "public");
+  console.log(`Serving static files from: ${distPath}`);
 
   if (!fs.existsSync(distPath)) {
     throw new Error(
@@ -52,6 +53,12 @@ export function serveStatic(app: Express) {
     );
   }
 
+  // This is the fix: Express is having trouble with the wildcard matching
+  // for nested directories. By explicitly serving the assets directory,
+  // we can ensure that the JS and CSS files are found.
+  app.use("/assets", express.static(path.join(distPath, "assets")));
+
+  // We still need to serve the root `distPath` for files like `index.html`
   app.use(express.static(distPath));
 
   // fall through to index.html if the file doesn't exist
