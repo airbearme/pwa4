@@ -37,6 +37,7 @@ export default defineConfig({
       "@": path.resolve(__dirname, "client", "src"),
     },
   },
+  envDir: path.resolve(__dirname),
   root: path.resolve(__dirname, "client"),
   build: {
     outDir: path.resolve(__dirname, "dist/public"),
