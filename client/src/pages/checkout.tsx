@@ -115,6 +115,16 @@ export default function Checkout() {
   const [qrCode, setQrCode] = useState("");
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [walletLoading, setWalletLoading] = useState({ apple: false, google: false });
+  const [stripeAvailable, setStripeAvailable] = useState(false);
+
+  useEffect(() => {
+    async function checkStripe() {
+      const stripe = await stripePromise;
+      setStripeAvailable(!!stripe);
+    }
+    checkStripe();
+  }, []);
+
 
   // Sample order data - in real app this would come from cart/order context
   const orderData = {
@@ -160,7 +170,7 @@ export default function Checkout() {
 
   useEffect(() => {
     // Initialize payment intent when method changes
-    if (orderData.total > 0) {
+    if (orderData.total > 0 && stripeAvailable) {
       createPaymentIntentMutation.mutate({
         amount: orderData.total,
         orderId: orderData.orderId,
@@ -168,7 +178,7 @@ export default function Checkout() {
         paymentMethod,
       });
     }
-  }, [paymentMethod]);
+  }, [paymentMethod, stripeAvailable]);
 
   const handlePaymentSuccess = () => {
     setPaymentSuccess(true);
@@ -249,6 +259,21 @@ export default function Checkout() {
       setWalletLoading((prev) => ({ ...prev, google: false }));
     }
   };
+
+  if (import.meta.env.PROD && !stripeAvailable) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="max-w-md mx-auto glass-morphism">
+          <CardContent className="p-6 text-center">
+            <h2 className="text-xl font-semibold mb-4">Payments Temporarily Unavailable</h2>
+            <p className="text-muted-foreground">
+              We are currently unable to process online payments. Please check back later.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (!user) {
     return (

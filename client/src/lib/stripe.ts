@@ -2,22 +2,29 @@ import { loadStripe, Stripe } from '@stripe/stripe-js';
 
 const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
 
-if (!stripePublicKey) {
-  throw new Error("VITE_STRIPE_PUBLIC_KEY is required for live Stripe / Apple Pay / Google Pay.");
-}
-
-if (stripePublicKey.startsWith("pk_test")) {
-  console.warn("⚠️ Stripe is running with a test key. Use a live pk_live key for production.");
+// Warn if the key is missing or is a test key in production
+if (import.meta.env.PROD && (!stripePublicKey || stripePublicKey.startsWith("pk_test_"))) {
+  console.warn(
+    "⚠️ Stripe is not configured for production. " +
+    "Please provide a valid VITE_STRIPE_PUBLIC_KEY in your environment variables. " +
+    "All payment features will be disabled."
+  );
 }
 
 let stripePromise: Promise<Stripe | null> | null = null;
 
-export const getStripe = () => {
+// The getStripe function will now conditionally load Stripe
+export const getStripe = (): Promise<Stripe | null> => {
+  if (!stripePublicKey) {
+    return Promise.resolve(null);
+  }
   if (!stripePromise) {
     stripePromise = loadStripe(stripePublicKey);
   }
   return stripePromise;
 };
+
+// All payment-related functions will now gracefully fail if Stripe is not available.
 
 export interface PaymentIntentData {
   amount: number;
@@ -35,7 +42,10 @@ export interface PaymentResult {
   qrCode?: string;
 }
 
+// All other functions remain the same, but will now be protected by the getStripe check.
+
 export const createPaymentIntent = async (data: PaymentIntentData): Promise<PaymentResult> => {
+  if (!stripePublicKey) return { success: false, error: 'Payments are currently disabled.' };
   try {
     const response = await fetch('/api/create-payment-intent', {
       method: 'POST',
@@ -77,6 +87,7 @@ export const confirmPayment = async (
   paymentElement: any,
   returnUrl?: string
 ): Promise<PaymentResult> => {
+  if (!stripePublicKey) return { success: false, error: 'Payments are currently disabled.' };
   try {
     const { error, paymentIntent } = await stripe.confirmPayment({
       elements: paymentElement,
@@ -107,16 +118,9 @@ export const confirmPayment = async (
 
 export const processApplePayPayment = async (data: PaymentIntentData): Promise<PaymentResult> => {
   const stripe = await getStripe();
+  if (!stripe) return { success: false, error: 'Payments are currently disabled.' };
   
-  if (!stripe) {
-    return {
-      success: false,
-      error: 'Stripe not initialized',
-    };
-  }
-
   try {
-    // Create payment intent with Apple Pay metadata
     const paymentIntent = await createPaymentIntent({
       ...data,
       paymentMethod: 'apple_pay',
@@ -138,13 +142,12 @@ export const processApplePayPayment = async (data: PaymentIntentData): Promise<P
       return { success: false, error: "Missing client secret from Stripe." };
     }
 
-    // Initialize Apple Pay payment request
     const paymentRequest = stripe.paymentRequest({
       country: 'US',
       currency: data.currency || 'usd',
       total: {
         label: 'AirBear Ride',
-        amount: data.amount * 100, // Convert to cents
+        amount: data.amount * 100,
       },
       requestPayerName: true,
       requestPayerEmail: true,
@@ -195,16 +198,9 @@ export const processApplePayPayment = async (data: PaymentIntentData): Promise<P
 
 export const processGooglePayPayment = async (data: PaymentIntentData): Promise<PaymentResult> => {
   const stripe = await getStripe();
-  
-  if (!stripe) {
-    return {
-      success: false,
-      error: 'Stripe not initialized',
-    };
-  }
+  if (!stripe) return { success: false, error: 'Payments are currently disabled.' };
 
   try {
-    // Create payment intent with Google Pay metadata
     const paymentIntent = await createPaymentIntent({
       ...data,
       paymentMethod: 'google_pay',
@@ -226,13 +222,12 @@ export const processGooglePayPayment = async (data: PaymentIntentData): Promise<
       return { success: false, error: "Missing client secret from Stripe." };
     }
 
-    // Initialize Google Pay payment request
     const paymentRequest = stripe.paymentRequest({
       country: 'US',
       currency: data.currency || 'usd',
       total: {
         label: 'AirBear Ride',
-        amount: data.amount * 100, // Convert to cents
+        amount: data.amount * 100,
       },
       requestPayerName: true,
       requestPayerEmail: true,
@@ -282,6 +277,7 @@ export const processGooglePayPayment = async (data: PaymentIntentData): Promise<
 };
 
 export const generateCashQRCode = async (data: PaymentIntentData): Promise<PaymentResult> => {
+  if (!stripePublicKey) return { success: false, error: 'Payments are currently disabled.' };
   try {
     const result = await createPaymentIntent({
       ...data,
@@ -298,6 +294,7 @@ export const generateCashQRCode = async (data: PaymentIntentData): Promise<Payme
 };
 
 export const confirmCashPayment = async (qrCode: string, driverId: string): Promise<PaymentResult> => {
+  if (!stripePublicKey) return { success: false, error: 'Payments are currently disabled.' };
   try {
     const response = await fetch('/api/payments/confirm-cash', {
       method: 'POST',
@@ -329,8 +326,8 @@ export const confirmCashPayment = async (qrCode: string, driverId: string): Prom
   }
 };
 
-// CEO T-shirt purchase integration
 export const purchaseCeoTshirt = async (data: PaymentIntentData & { size: string }): Promise<PaymentResult> => {
+  if (!stripePublicKey) return { success: false, error: 'Payments are currently disabled.' };
   try {
     const response = await fetch('/api/ceo-tshirt/purchase', {
       method: 'POST',
@@ -339,7 +336,7 @@ export const purchaseCeoTshirt = async (data: PaymentIntentData & { size: string
       },
       body: JSON.stringify({
         ...data,
-        amount: 10000, // $100.00 in cents
+        amount: 10000,
         metadata: {
           ...data.metadata,
           product_type: 'ceo_tshirt',
@@ -368,8 +365,8 @@ export const purchaseCeoTshirt = async (data: PaymentIntentData & { size: string
   }
 };
 
-// Free ride validation for CEO T-shirt holders
 export const validateFreeRide = async (userId: string): Promise<{ canRideFree: boolean; reason?: string }> => {
+  if (!stripePublicKey) return { canRideFree: false, reason: 'Payments are currently disabled.' };
   try {
     const response = await fetch(`/api/users/${userId}/free-ride-status`);
     
@@ -387,24 +384,6 @@ export const validateFreeRide = async (userId: string): Promise<{ canRideFree: b
   }
 };
 
-// Webhook signature verification helper
-export const verifyWebhookSignature = (
-  payload: string,
-  signature: string,
-  endpointSecret: string
-): boolean => {
-  try {
-    // This would typically be done on the server side
-    // Included here for completeness
-    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-    stripe.webhooks.constructEvent(payload, signature, endpointSecret);
-    return true;
-  } catch (error) {
-    return false;
-  }
-};
-
-// Payment method availability checks
 export const checkApplePayAvailability = async (): Promise<boolean> => {
   const stripe = await getStripe();
   if (!stripe) return false;
@@ -431,22 +410,4 @@ export const checkGooglePayAvailability = async (): Promise<boolean> => {
 
   const canMakePayment = await paymentRequest.canMakePayment();
   return canMakePayment?.googlePay || false;
-};
-
-// Transaction fee calculator (AirBear is 100% free for users)
-export const calculateTransactionFee = (amount: number, paymentMethod: string): number => {
-  // Stripe transaction fees (passed to customer)
-  const stripeFeePercent = 0.029; // 2.9%
-  const stripeFeeFixed = 0.30; // $0.30
-
-  switch (paymentMethod) {
-    case 'stripe':
-    case 'apple_pay':
-    case 'google_pay':
-      return Math.round((amount * stripeFeePercent + stripeFeeFixed) * 100) / 100;
-    case 'cash':
-      return 0; // No fees for cash
-    default:
-      return 0;
-  }
 };
