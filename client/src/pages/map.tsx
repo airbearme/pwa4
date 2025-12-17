@@ -68,6 +68,7 @@ export default function Map() {
   const { toast } = useToast();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
+  const driverMarkerRef = useRef<any>(null);
   const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
   const [selectedDestination, setSelectedDestination] = useState<Spot | null>(null);
   const [showBookingDialog, setShowBookingDialog] = useState(false);
@@ -116,28 +117,6 @@ export default function Map() {
     return [];
   }, [spotsData, spotsError]);
 
-  useEffect(() => {
-    const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
-    const ws = new WebSocket(wsUrl);
-
-    ws.onopen = () => {
-      console.log("WebSocket connected");
-    };
-
-    ws.onmessage = (event) => {
-      const newLocation = JSON.parse(event.data as string);
-      console.log("Received new location:", newLocation);
-    };
-
-    ws.onclose = () => {
-      console.log("WebSocket disconnected");
-    };
-
-    return () => {
-      ws.close();
-    };
-  }, []);
 
   const rickshaws = useMemo(() => {
     if (rickshawsData.length > 0) return rickshawsData;
@@ -220,7 +199,32 @@ export default function Map() {
         ws.onmessage = (event) => {
           const newLocation = JSON.parse(event.data as string);
           console.log("Received new location:", newLocation);
-          // Logic to update a marker on the map would go here
+
+          if (map && window.L) {
+            const { lat, lng } = newLocation;
+            const latLng = [lat, lng];
+
+            if (driverMarkerRef.current) {
+              driverMarkerRef.current.setLatLng(latLng);
+            } else {
+              const driverIcon = window.L.divIcon({
+                html: renderToString(
+                  <div className="relative flex items-center justify-center">
+                    <motion.div
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                      className="absolute w-12 h-12 bg-blue-500/50 rounded-full"
+                    />
+                    <RickshawWheel size="lg" className="text-blue-700 drop-shadow-lg" />
+                  </div>
+                ),
+                className: 'bg-transparent border-0',
+                iconSize: [48, 48],
+              });
+
+              driverMarkerRef.current = window.L.marker(latLng, { icon: driverIcon }).addTo(map);
+            }
+          }
         };
         ws.onclose = () => console.log("WebSocket disconnected");
 
@@ -253,9 +257,9 @@ export default function Map() {
 
     const map = mapInstanceRef.current;
     
-    // Clear existing markers
+    // Clear existing spot markers, but not the driver marker
     map.eachLayer((layer: any) => {
-      if (layer instanceof window.L.Marker || layer instanceof window.L.CircleMarker) {
+      if ((layer instanceof window.L.Marker || layer instanceof window.L.CircleMarker) && layer !== driverMarkerRef.current) {
         map.removeLayer(layer);
       }
     });
