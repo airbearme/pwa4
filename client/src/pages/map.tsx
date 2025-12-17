@@ -146,10 +146,10 @@ export default function Map() {
 
   useEffect(() => {
     // This effect handles the initial loading transition.
-    if (!spotsLoading && !rickshawLoading) {
+    if (!spotsLoading && !rickshawLoading || spotsError || rickshawError) {
       setMapLoading(false);
     }
-  }, [spotsLoading, rickshawLoading]);
+  }, [spotsLoading, rickshawLoading, spotsError, rickshawError]);
 
   // Initialize Leaflet map and WebSocket connection
   useEffect(() => {

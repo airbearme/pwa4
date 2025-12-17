@@ -12,7 +12,9 @@ const CONFIG = {
 };
 
 const LOCAL_DIR = path.resolve('dist/public');
-const REMOTE_DIR = '/public';
+const REMOTE_DIR = '.';
+
+const IGNORE_CLEAN = ['.ftpquota', 'cgi-bin', 'logs', 'server', 'public', 'httpdocs'];
 
 const joinRemote = (...parts) => parts.filter(Boolean).join('/').replace(/\\/g, '/');
 
@@ -35,7 +37,7 @@ async function uploadDir(sftp, localDir, remoteDir) {
 async function cleanRemote(sftp, dir) {
   const entries = await sftp.list(dir);
   for (const entry of entries) {
-    if (entry.name === '.' || entry.name === '..') continue;
+    if (entry.name === '.' || entry.name === '..' || IGNORE_CLEAN.includes(entry.name)) continue;
     const remotePath = joinRemote(dir, entry.name);
     if (entry.type === 'd') {
       await sftp.rmdir(remotePath, true);
@@ -48,7 +50,7 @@ async function cleanRemote(sftp, dir) {
 async function setPerms(sftp, dir) {
   const entries = await sftp.list(dir);
   for (const entry of entries) {
-    if (entry.name === '.' || entry.name === '..') continue;
+    if (entry.name === '.' || entry.name === '..' || IGNORE_CLEAN.includes(entry.name)) continue;
     const remotePath = joinRemote(dir, entry.name);
     if (entry.type === 'd') {
       await sftp.chmod(remotePath, '755');
