@@ -102,7 +102,6 @@ export default function Map() {
         isCharging: item.isCharging ?? item.is_charging ?? false,
       }));
     },
-    refetchInterval: 15000,
     retry: 1,
   });
 
@@ -116,6 +115,29 @@ export default function Map() {
     }
     return [];
   }, [spotsData, spotsError]);
+
+  useEffect(() => {
+    const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+      console.log("WebSocket connected");
+    };
+
+    ws.onmessage = (event) => {
+      const newLocation = JSON.parse(event.data as string);
+      console.log("Received new location:", newLocation);
+    };
+
+    ws.onclose = () => {
+      console.log("WebSocket disconnected");
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, []);
 
   const rickshaws = useMemo(() => {
     if (rickshawsData.length > 0) return rickshawsData;
@@ -143,76 +165,87 @@ export default function Map() {
     }
   }, [spotsError, rickshawError, toast]);
 
-  // Initialize Leaflet map
   useEffect(() => {
-    if (!mapRef.current || mapReady) return;
+    // This effect handles the initial loading transition.
+    if (!spotsLoading && !rickshawLoading) {
+      setMapLoading(false);
+    }
+  }, [spotsLoading, rickshawLoading]);
 
-    const initMap = async () => {
+  // Initialize Leaflet map and WebSocket connection
+  useEffect(() => {
+    // Exit if the map container isn't rendered yet, or if the map is already initialized.
+    if (!mapRef.current || mapInstanceRef.current) return;
+
+    let map: any; // Define map and ws here to access them in the cleanup function
+    let ws: WebSocket;
+
+    const initMapAndSocket = async () => {
       try {
-        setMapLoading(true);
-        // Load Leaflet from CDN
         if (!window.L) {
-          // Create and append Leaflet CSS
           const leafletCSS = document.createElement('link');
           leafletCSS.rel = 'stylesheet';
           leafletCSS.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-          leafletCSS.crossOrigin = 'anonymous';
           document.head.appendChild(leafletCSS);
 
-          // Load Leaflet JavaScript
           await new Promise((resolve, reject) => {
             const leafletJS = document.createElement('script');
             leafletJS.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-            leafletJS.crossOrigin = 'anonymous';
             leafletJS.onload = resolve;
             leafletJS.onerror = reject;
             document.head.appendChild(leafletJS);
           });
         }
 
-        // Initialize map
-        const map = window.L.map(mapRef.current, {
-          center: [42.0987, -75.9179], // Binghamton coordinates
+        map = window.L.map(mapRef.current, {
+          center: [42.0987, -75.9179],
           zoom: 12,
           zoomControl: false,
         });
+        mapInstanceRef.current = map;
 
-        // Add zoom controls
-        const zoomControl = window.L.control.zoom({
-          position: 'topright'
-        });
-        zoomControl.addTo(map);
-
-        // Add tile layer
+        window.L.control.zoom({ position: 'topright' }).addTo(map);
         window.L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-          subdomains: 'abcd',
-          maxZoom: 20
+          attribution: '&copy; OpenStreetMap &copy; CARTO',
         }).addTo(map);
 
-        mapInstanceRef.current = map;
         setMapReady(true);
-        setMapLoading(false);
-        
+
+        // WebSocket setup
+        const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => console.log("WebSocket connected");
+        ws.onmessage = (event) => {
+          const newLocation = JSON.parse(event.data as string);
+          console.log("Received new location:", newLocation);
+          // Logic to update a marker on the map would go here
+        };
+        ws.onclose = () => console.log("WebSocket disconnected");
+
       } catch (error) {
-        console.error('Error initializing map:', error);
-        setMapLoading(false);
+        console.error('Error initializing map or WebSocket:', error);
         toast({
           title: "Map Loading Error",
-          description: "Unable to load the map. Please try refreshing the page.",
+          description: "Unable to load the map. Please try refreshing.",
           variant: "destructive",
         });
       }
     };
 
-    initMap();
+    initMapAndSocket();
 
     return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
+      if (ws) {
+        ws.close();
+      }
+      if (map) {
+        map.remove();
+        mapInstanceRef.current = null;
       }
     };
-  }, [mapReady, toast]);
+  }, [mapLoading, toast]); // Reruns when loading is false
 
   // Add markers to map
   useEffect(() => {

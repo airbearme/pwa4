@@ -11,6 +11,7 @@ dist/
 build/
 .next/
 out/
+client/dev-dist/
 
 # Environment variables
 .env
@@ -119,6 +120,8 @@ Thumbs.db
 *.sqlite
 
 # Secrets
-secrets/playwright-report/
-\n# Test reports\nplaywright-report/
-\n# Test results\ntest-results/
+secrets/
+
+# Test reports
+playwright-report/
+test-results/

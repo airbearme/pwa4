@@ -19,7 +19,7 @@ export function log(message: string, source = "express") {
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 
-export async function setupVite(app: Express, server: Server) {
+export async function setupVite(app: Express) {
   console.log("Setting up Vite...");
   
   const vite = await createViteServer({
@@ -32,15 +32,8 @@ export async function setupVite(app: Express, server: Server) {
   // Use vite's connect instance as middleware.
   app.use(vite.middlewares);
 
-  // Handle WebSocket upgrades for HMR
-  server.on('upgrade', (req, socket, head) => {
-    // Ensure the request is meant for the Vite WS server
-    if (req.headers['upgrade'] === 'websocket') {
-      vite.ws.handleUpgrade(req, socket, head);
-    }
-  });
-
-  console.log("Vite middlewares and WebSocket proxy enabled.");
+  console.log("Vite middlewares enabled.");
+  return vite;
 }
 
 export function serveStatic(app: Express) {
