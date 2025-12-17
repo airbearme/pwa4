@@ -20,6 +20,7 @@ import Privacy from "@/pages/privacy";
 import Terms from "@/pages/terms";
 import Challenges from "@/pages/challenges";
 import Rewards from "@/pages/rewards";
+import DriverPage from "@/pages/driver";
 import NotFound from "@/pages/not-found";
 
 // Components
@@ -48,6 +49,7 @@ function Router() {
           <Route path="/safety" component={Safety} />
           <Route path="/privacy" component={Privacy} />
           <Route path="/terms" component={Terms} />
+          <Route path="/driver" component={DriverPage} />
           <Route component={NotFound} />
         </Switch>
       </main>

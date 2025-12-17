@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
+import { WebSocketServer } from "ws";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
@@ -40,6 +41,26 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
+  const wss = new WebSocketServer({ noServer: true });
+
+  wss.on("connection", (ws) => {
+    console.log("Client connected");
+
+    ws.on("message", (message) => {
+      console.log(`Received message: ${message}`);
+      // Broadcast the message to all clients
+      wss.clients.forEach((client) => {
+        if (client !== ws && client.readyState === ws.OPEN) {
+          client.send(message);
+        }
+      });
+    });
+
+    ws.on("close", () => {
+      console.log("Client disconnected");
+    });
+  });
+
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
@@ -52,7 +73,16 @@ app.use((req, res, next) => {
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
   if (app.get("env") === "development") {
-    await setupVite(app, server);
+    const vite = await setupVite(app);
+    server.on("upgrade", (req, socket, head) => {
+      if (req.url?.startsWith("/ws")) {
+        wss.handleUpgrade(req, socket, head, (ws) => {
+          wss.emit("connection", ws, req);
+        });
+      } else {
+        vite.ws.handleUpgrade(req, socket, head);
+      }
+    });
   } else {
     serveStatic(app);
   }
