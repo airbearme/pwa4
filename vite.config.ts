@@ -7,6 +7,10 @@ import { VitePWA } from 'vite-plugin-pwa';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
+  define: {
+    'import.meta.env.VITE_USE_MOCK_API': '"true"',
+    'import.meta.env.VITE_MAP_ALWAYS_RENDER': '"true"',
+  },
   plugins: [
     react(),
     VitePWA({

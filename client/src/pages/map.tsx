@@ -68,7 +68,6 @@ export default function Map() {
   const { toast } = useToast();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
-  const driverMarkerRef = useRef<any>(null);
   const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
   const [selectedDestination, setSelectedDestination] = useState<Spot | null>(null);
   const [showBookingDialog, setShowBookingDialog] = useState(false);
@@ -103,6 +102,7 @@ export default function Map() {
         isCharging: item.isCharging ?? item.is_charging ?? false,
       }));
     },
+    refetchInterval: 15000,
     retry: 1,
   });
 
@@ -116,7 +116,6 @@ export default function Map() {
     }
     return [];
   }, [spotsData, spotsError]);
-
 
   const rickshaws = useMemo(() => {
     if (rickshawsData.length > 0) return rickshawsData;
@@ -144,112 +143,76 @@ export default function Map() {
     }
   }, [spotsError, rickshawError, toast]);
 
+  // Initialize Leaflet map
   useEffect(() => {
-    // This effect handles the initial loading transition.
-    if (!spotsLoading && !rickshawLoading || spotsError || rickshawError) {
-      setMapLoading(false);
-    }
-  }, [spotsLoading, rickshawLoading, spotsError, rickshawError]);
+    if (!mapRef.current || mapReady) return;
 
-  // Initialize Leaflet map and WebSocket connection
-  useEffect(() => {
-    // Exit if the map container isn't rendered yet, or if the map is already initialized.
-    if (!mapRef.current || mapInstanceRef.current) return;
-
-    let map: any; // Define map and ws here to access them in the cleanup function
-    let ws: WebSocket;
-
-    const initMapAndSocket = async () => {
+    const initMap = async () => {
       try {
+        setMapLoading(true);
+        // Load Leaflet from CDN
         if (!window.L) {
+          // Create and append Leaflet CSS
           const leafletCSS = document.createElement('link');
           leafletCSS.rel = 'stylesheet';
           leafletCSS.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+          leafletCSS.crossOrigin = 'anonymous';
           document.head.appendChild(leafletCSS);
 
+          // Load Leaflet JavaScript
           await new Promise((resolve, reject) => {
             const leafletJS = document.createElement('script');
             leafletJS.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+            leafletJS.crossOrigin = 'anonymous';
             leafletJS.onload = resolve;
             leafletJS.onerror = reject;
             document.head.appendChild(leafletJS);
           });
         }
 
-        map = window.L.map(mapRef.current, {
-          center: [42.0987, -75.9179],
+        // Initialize map
+        const map = window.L.map(mapRef.current, {
+          center: [42.0987, -75.9179], // Binghamton coordinates
           zoom: 12,
           zoomControl: false,
         });
-        mapInstanceRef.current = map;
 
-        window.L.control.zoom({ position: 'topright' }).addTo(map);
+        // Add zoom controls
+        const zoomControl = window.L.control.zoom({
+          position: 'topright'
+        });
+        zoomControl.addTo(map);
+
+        // Add tile layer
         window.L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-          attribution: '&copy; OpenStreetMap &copy; CARTO',
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+          subdomains: 'abcd',
+          maxZoom: 20
         }).addTo(map);
 
+        mapInstanceRef.current = map;
         setMapReady(true);
-
-        // WebSocket setup
-        const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-        const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
-        ws = new WebSocket(wsUrl);
-
-        ws.onopen = () => console.log("WebSocket connected");
-        ws.onmessage = (event) => {
-          const newLocation = JSON.parse(event.data as string);
-          console.log("Received new location:", newLocation);
-
-          if (map && window.L) {
-            const { lat, lng } = newLocation;
-            const latLng = [lat, lng];
-
-            if (driverMarkerRef.current) {
-              driverMarkerRef.current.setLatLng(latLng);
-            } else {
-              const driverIcon = window.L.divIcon({
-                html: renderToString(
-                  <div className="relative flex items-center justify-center">
-                    <motion.div
-                      animate={{ scale: [1, 1.2, 1] }}
-                      transition={{ duration: 1.5, repeat: Infinity }}
-                      className="absolute w-12 h-12 bg-blue-500/50 rounded-full"
-                    />
-                    <RickshawWheel size="lg" className="text-blue-700 drop-shadow-lg" />
-                  </div>
-                ),
-                className: 'bg-transparent border-0',
-                iconSize: [48, 48],
-              });
-
-              driverMarkerRef.current = window.L.marker(latLng, { icon: driverIcon }).addTo(map);
-            }
-          }
-        };
-        ws.onclose = () => console.log("WebSocket disconnected");
+        setMapLoading(false);
 
       } catch (error) {
-        console.error('Error initializing map or WebSocket:', error);
+        console.error('Error initializing map:', error);
+        setMapLoading(false);
         toast({
           title: "Map Loading Error",
-          description: "Unable to load the map. Please try refreshing.",
+          description: "Unable to load the map. Please try refreshing the page.",
           variant: "destructive",
         });
       }
     };
 
-    initMapAndSocket();
+    initMap();
 
     return () => {
-      if (ws) {
-        ws.close();
-      }
-      if (map) {
-        map.remove();
-        mapInstanceRef.current = null;
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
       }
     };
-  }, [mapLoading, toast]); // Reruns when loading is false
+  }, [mapReady, toast]);
 
   // Add markers to map
   useEffect(() => {
@@ -257,9 +220,9 @@ export default function Map() {
 
     const map = mapInstanceRef.current;
     
-    // Clear existing spot markers, but not the driver marker
+    // Clear existing markers
     map.eachLayer((layer: any) => {
-      if ((layer instanceof window.L.Marker || layer instanceof window.L.CircleMarker) && layer !== driverMarkerRef.current) {
+      if (layer instanceof window.L.Marker || layer instanceof window.L.CircleMarker) {
         map.removeLayer(layer);
       }
     });
@@ -416,7 +379,7 @@ export default function Map() {
     setSelectedDestination(null);
   };
 
-  if (mapLoading || spotsLoading || rickshawLoading) {
+  if ((mapLoading || spotsLoading || rickshawLoading) && !import.meta.env.VITE_MAP_ALWAYS_RENDER) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
