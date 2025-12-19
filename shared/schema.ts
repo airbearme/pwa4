@@ -43,12 +43,16 @@ export const airbears = pgTable("airbears", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   driverId: varchar("driver_id").references(() => users.id),
   currentSpotId: varchar("current_spot_id").references(() => spots.id),
+  latitude: decimal("latitude", { precision: 10, scale: 8 }),
+  longitude: decimal("longitude", { precision: 11, scale: 8 }),
+  heading: decimal("heading", { precision: 5, scale: 2 }).default("0"),
   batteryLevel: integer("battery_level").notNull().default(100),
   isAvailable: boolean("is_available").notNull().default(true),
   isCharging: boolean("is_charging").notNull().default(false),
   totalDistance: decimal("total_distance", { precision: 10, scale: 2 }).notNull().default("0"),
   maintenanceStatus: text("maintenance_status").notNull().default("good"),
-  createdAt: timestamp("created_at").notNull().default(sql`now()`)
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`)
 });
 
 // Rides table
@@ -58,7 +62,7 @@ export const rides = pgTable("rides", {
   driverId: varchar("driver_id").references(() => users.id),
   airbearId: varchar("airbear_id").references(() => airbears.id),
   pickupSpotId: varchar("pickup_spot_id").notNull().references(() => spots.id),
-  destinationSpotId: varchar("destination_spot_id").notNull().references(() => spots.id),
+  dropoffSpotId: varchar("dropoff_spot_id").notNull().references(() => spots.id), // Renamed for consistency
   status: rideStatusEnum("status").notNull().default("pending"),
   estimatedDuration: integer("estimated_duration"), // minutes
   actualDuration: integer("actual_duration"), // minutes

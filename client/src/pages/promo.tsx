@@ -9,11 +9,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Link } from "wouter";
 import RickshawWheel from "@/components/airbear-wheel";
-import { 
-  ShirtIcon as Shirt, 
-  Crown, 
-  Sparkles, 
-  Gift, 
+import { useToast } from "@/hooks/use-toast";
+import { purchaseCeoTshirt } from "@/lib/stripe";
+import { useMutation } from "@tanstack/react-query";
+import LoadingSpinner from "@/components/loading-spinner";
+import {
+  ShirtIcon as Shirt,
+  Crown,
+  Sparkles,
+  Gift,
   CheckCircle,
   AlertTriangle,
   Calendar
@@ -21,23 +25,61 @@ import {
 
 export default function Promo() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [showAgreement, setShowAgreement] = useState(false);
   const [promoActive, setPromoActive] = useState(false);
+  const [selectedSize, setSelectedSize] = useState("L");
+
+  const purchaseMutation = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("Please log in to purchase");
+
+      return purchaseCeoTshirt({
+        amount: 100,
+        currency: 'usd',
+        size: selectedSize,
+        metadata: {
+          user_id: user.id,
+          product_type: 'ceo_tshirt'
+        }
+      });
+    },
+    onSuccess: (result) => {
+      if (result.success && result.paymentIntent?.clientSecret) {
+        // Redirect to checkout with the client secret
+        const stripeUrl = `/checkout?clientSecret=${result.paymentIntent.clientSecret}&product=ceo_tshirt`;
+        window.location.href = stripeUrl;
+      } else {
+        toast({
+          title: "Purchase Setup Failed",
+          description: result.error || "Unable to initiate payment",
+          variant: "destructive"
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
 
   const handlePromoActivation = () => {
     if (!acceptedTerms) {
       setShowAgreement(true);
       return;
     }
-    setPromoActive(true);
+    purchaseMutation.mutate();
   };
 
   return (
     <div className="min-h-screen py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <motion.div 
+        <motion.div
           className="text-center mb-12"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -59,7 +101,7 @@ export default function Promo() {
               <Crown className="h-8 w-8 text-amber-500" />
             </motion.div>
           </div>
-          
+
           <h1 className="text-4xl sm:text-5xl font-bold text-foreground mb-4">
             CEO-Signed <span className="text-primary animate-pulse-glow">AirBear</span> T-Shirt
           </h1>
@@ -95,8 +137,25 @@ export default function Promo() {
                     <div className="text-sm text-emerald-600">Solar Power in the Air!</div>
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="font-medium">Size:</span>
+                    <div className="flex space-x-2">
+                      {['S', 'M', 'L', 'XL', 'XXL'].map(size => (
+                        <button
+                          key={size}
+                          onClick={() => setSelectedSize(size)}
+                          className={`w-8 h-8 rounded-full border flex items-center justify-center text-xs transition-colors ${selectedSize === size
+                            ? 'bg-primary text-white border-primary'
+                            : 'hover:bg-muted'
+                            }`}
+                        >
+                          {size}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                   <div className="flex justify-between">
                     <span className="font-medium">Material:</span>
                     <span>100% Organic Cotton</span>
@@ -130,7 +189,7 @@ export default function Promo() {
                   <p className="text-sm text-muted-foreground">One complimentary ride every 24 hours</p>
                 </div>
               </div>
-              
+
               <div className="flex items-start space-x-3">
                 <CheckCircle className="h-5 w-5 text-green-500 mt-1" />
                 <div>
@@ -138,7 +197,7 @@ export default function Promo() {
                   <p className="text-sm text-muted-foreground">Skip the line with priority access</p>
                 </div>
               </div>
-              
+
               <div className="flex items-start space-x-3">
                 <CheckCircle className="h-5 w-5 text-green-500 mt-1" />
                 <div>
@@ -146,7 +205,7 @@ export default function Promo() {
                   <p className="text-sm text-muted-foreground">Access to member-only gatherings</p>
                 </div>
               </div>
-              
+
               <div className="flex items-start space-x-3">
                 <AlertTriangle className="h-5 w-5 text-amber-500 mt-1" />
                 <div>
@@ -179,7 +238,7 @@ export default function Promo() {
                 />
                 <label htmlFor="terms" className="text-sm cursor-pointer">
                   I agree to the{" "}
-                  <button 
+                  <button
                     className="text-primary hover:underline"
                     onClick={() => setShowAgreement(true)}
                   >
@@ -212,11 +271,15 @@ export default function Promo() {
                 <Button
                   size="lg"
                   onClick={handlePromoActivation}
-                  disabled={!user}
+                  disabled={!user || purchaseMutation.isPending}
                   className="eco-gradient text-white hover-lift ripple-effect px-8 py-4 text-lg font-semibold animate-pulse-glow"
                 >
-                  <Sparkles className="mr-3 h-6 w-6" />
-                  Activate CEO T-Shirt Promo
+                  {purchaseMutation.isPending ? (
+                    <LoadingSpinner size="sm" className="mr-3" />
+                  ) : (
+                    <Sparkles className="mr-3 h-6 w-6" />
+                  )}
+                  {purchaseMutation.isPending ? 'Preparing Payment...' : 'Activate CEO T-Shirt Promo'}
                 </Button>
               )}
 
@@ -241,41 +304,41 @@ export default function Promo() {
                 AirBear CEO T-Shirt End User Agreement
               </DialogTitle>
             </DialogHeader>
-            
+
             <div className="space-y-4 text-sm">
               <section>
                 <h3 className="font-semibold mb-2">1. EXCLUSIVE BENEFITS</h3>
                 <p>The CEO-signed AirBear T-shirt grants the holder one (1) complimentary AirBear ride per 24-hour period. This benefit is non-transferable and tied exclusively to the purchaser's account.</p>
               </section>
-              
+
               <section>
                 <h3 className="font-semibold mb-2">2. NON-TRANSFERABLE LICENSE</h3>
                 <p>This promotional benefit cannot be sold, transferred, gifted, or shared with any other individual. Violation of this term results in immediate termination of benefits.</p>
               </section>
-              
+
               <section>
                 <h3 className="font-semibold mb-2">3. RIDE LIMITATIONS</h3>
                 <p>Free rides are limited to standard AirBear routes within Binghamton. Premium routes, extended trips, or special event transportation may incur additional charges.</p>
               </section>
-              
+
               <section>
                 <h3 className="font-semibold mb-2">4. AUTHENTICITY GUARANTEE</h3>
                 <p>Each T-shirt includes an authentic CEO signature and holographic verification. AirBear reserves the right to verify authenticity at any time.</p>
               </section>
-              
+
               <section>
                 <h3 className="font-semibold mb-2">5. ENVIRONMENTAL COMMITMENT</h3>
                 <p>By purchasing this item, you commit to supporting AirBear's mission of sustainable transportation and reducing carbon emissions in Binghamton.</p>
               </section>
 
               <div className="flex space-x-3 mt-6">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => setShowAgreement(false)}
                 >
                   Close
                 </Button>
-                <Button 
+                <Button
                   onClick={() => {
                     setAcceptedTerms(true);
                     setShowAgreement(false);

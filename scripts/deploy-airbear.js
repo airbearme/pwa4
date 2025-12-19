@@ -12,20 +12,20 @@ dotenv.config();
 const IONOS_CONFIG = {
   host: 'access-5018328928.webspace-host.com',
   username: 'a2096159',
-  password: 'Yaa7Rih^_gpej+-',
+  password: 'Danknugs420420',
   port: 22,
-  remoteBase: '/httpdocs', // IONOS web directory
+  remoteBase: '/public', // IONOS web directory
   localDist: 'dist/public' // Local build directory
 };
 
 console.log('🚀 Starting AirBear PWA deployment to IONOS...');
 
-const joinRemotePath = (...parts) => 
+const joinRemotePath = (...parts) =>
   parts.filter(Boolean).join('/').replace(/\\/g, '/');
 
 async function deploy() {
   const sftp = new SftpClient();
-  
+
   try {
     // 1. Build the application
     console.log('📦 Building application...');
@@ -50,7 +50,7 @@ async function deploy() {
 
     // 4. Check and create remote directories if needed
     console.log('📂 Verifying remote directory structure...');
-    
+
     // First, check if we can list the root directory
     let rootContents;
     try {
@@ -74,7 +74,7 @@ async function deploy() {
       } catch (mkdirErr) {
         console.error(`❌ Failed to create ${targetDir}:`, mkdirErr.message);
         console.log('ℹ️ Attempting to use alternative directory...');
-        
+
         // Try alternative directories
         const altDirs = ['/htdocs', '/www', '/public_html'];
         for (const dir of altDirs) {
@@ -90,7 +90,7 @@ async function deploy() {
             continue;
           }
         }
-        
+
         if (targetDir === IONOS_CONFIG.remoteBase) {
           throw new Error('Could not find a suitable web directory. Please check your hosting configuration.');
         }
@@ -99,10 +99,10 @@ async function deploy() {
 
     // 5. Upload files
     console.log(`\n📤 Uploading files to ${targetDir}...`);
-    
+
     async function uploadDir(localPath, remotePath) {
       const files = fs.readdirSync(localPath);
-      
+
       for (const file of files) {
         const localFilePath = path.join(localPath, file);
         const remoteFilePath = joinRemotePath(remotePath, file);
@@ -111,6 +111,7 @@ async function deploy() {
         if (stats.isDirectory()) {
           try {
             await sftp.mkdir(remoteFilePath, true);
+            await sftp.chmod(remoteFilePath, 0o755); // Ensure directory is executable/readable
             console.log(`📁 Created directory: ${remoteFilePath}`);
           } catch (e) {
             // Directory might already exist
@@ -118,6 +119,7 @@ async function deploy() {
           await uploadDir(localFilePath, remoteFilePath);
         } else {
           await sftp.fastPut(localFilePath, remoteFilePath);
+          await sftp.chmod(remoteFilePath, 0o644); // Ensure file is readable
           console.log(`✅ Uploaded: ${remoteFilePath} (${(stats.size / 1024).toFixed(2)} KB)`);
         }
       }
@@ -130,7 +132,7 @@ async function deploy() {
       const indexExists = await sftp.exists(joinRemotePath(targetDir, 'index.html'));
       console.log('\n🔍 Verification:');
       console.log(`- index.html exists: ${indexExists ? '✅' : '❌'}`);
-      
+
       if (indexExists) {
         const stats = await sftp.stat(joinRemotePath(targetDir, 'index.html'));
         console.log(`- index.html size: ${stats.size} bytes`);

@@ -8,19 +8,22 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useToast } from "@/hooks/use-toast";
 import RickshawWheel from "@/components/airbear-wheel";
 import LoadingSpinner from "@/components/loading-spinner";
-import { 
-  estimateRideFare, 
+import {
+  estimateRideFare,
   estimateRideTime,
   getActiveSpots,
 } from "@/lib/spots";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { getSupabaseClient } from "@/lib/supabase-client";
 import AirbearAvatar from "@/components/airbear-avatar";
-import { 
-  MapPin, 
-  Battery, 
+import {
+  MapPin,
+  Battery,
   Clock,
 } from "lucide-react";
+import { useAirbearLocationUpdates } from "@/hooks/use-driver-location";
+import { useAuth } from "@/hooks/use-auth";
 
 declare global {
   interface Window {
@@ -39,9 +42,12 @@ interface Spot {
 interface Rickshaw {
   id: string;
   currentSpotId: string;
+  latitude: number;
+  longitude: number;
   batteryLevel: number;
   isAvailable: boolean;
   isCharging: boolean;
+  heading?: number;
 }
 
 const calculateDistanceKm = (from: Spot, to: Spot): number | null => {
@@ -65,6 +71,7 @@ const calculateDistanceKm = (from: Spot, to: Spot): number | null => {
 };
 
 export default function Map() {
+  const { user } = useAuth();
   const { toast } = useToast();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
@@ -77,34 +84,74 @@ export default function Map() {
   const { data: spotsData = [], isLoading: spotsLoading, error: spotsError } = useQuery<Spot[]>({
     queryKey: ["spots"],
     queryFn: async () => {
-      const response = await apiRequest("GET", "/api/spots");
-      const data = await response.json();
+      const supabase = getSupabaseClient(false);
+      if (!supabase) {
+        // Fallback to static data if no supabase
+        return getActiveSpots().map(s => ({ ...s, latitude: Number(s.latitude), longitude: Number(s.longitude) }));
+      }
+
+      const { data, error } = await supabase
+        .from('spots')
+        .select('*')
+        .eq('is_active', true);
+
+      if (error) throw error;
+
       return (data || []).map((spot: any) => ({
         ...spot,
         latitude: Number(spot.latitude ?? spot.lat ?? spot.latitide),
         longitude: Number(spot.longitude ?? spot.lng ?? spot.long ?? spot.lon),
-        isActive: spot.isActive ?? spot.is_active ?? true,
+        isActive: spot.is_active ?? true,
       }));
     },
     retry: 1,
   });
 
-  const { data: rickshawsData = [], isLoading: rickshawLoading, error: rickshawError } = useQuery<Rickshaw[]>({
-    queryKey: ["airbears"],
+  const { data: rickshawsQueryData = [], isLoading: rickshawLoading, error: rickshawError } = useQuery<Rickshaw[]>({
+    queryKey: ["airbears-initial"],
     queryFn: async () => {
-      const response = await apiRequest("GET", "/api/rickshaws");
-      const data = await response.json();
+      const supabase = getSupabaseClient(false);
+      if (!supabase) return [];
+
+      const { data, error } = await supabase
+        .from('airbears')
+        .select('*');
+
+      if (error) throw error;
+
       return (data || []).map((item: any) => ({
         id: item.id,
-        currentSpotId: item.currentSpotId ?? item.current_spot_id ?? item.currentspotid ?? "",
-        batteryLevel: Number(item.batteryLevel ?? item.battery_level ?? 100),
-        isAvailable: item.isAvailable ?? item.is_available ?? false,
-        isCharging: item.isCharging ?? item.is_charging ?? false,
+        currentSpotId: item.current_spot_id ?? "",
+        latitude: Number(item.latitude ?? 0),
+        longitude: Number(item.longitude ?? 0),
+        batteryLevel: Number(item.battery_level ?? 100),
+        isAvailable: item.is_available ?? false,
+        isCharging: item.is_charging ?? false,
+        heading: Number(item.heading ?? 0),
       }));
     },
-    refetchInterval: 15000,
     retry: 1,
   });
+
+  // Use the realtime hook for live updates
+  const realtimeRickshaws = useAirbearLocationUpdates();
+
+  // Combine initial data with realtime updates
+  const rickshawsData = useMemo(() => {
+    if (realtimeRickshaws.length > 0) {
+      return realtimeRickshaws.map((item: any) => ({
+        id: item.id,
+        currentSpotId: item.current_spot_id ?? "",
+        latitude: Number(item.latitude ?? 0),
+        longitude: Number(item.longitude ?? 0),
+        batteryLevel: Number(item.battery_level ?? 100),
+        isAvailable: item.is_available ?? false,
+        isCharging: item.is_charging ?? false,
+        heading: Number(item.heading ?? 0),
+      }));
+    }
+    return rickshawsQueryData;
+  }, [realtimeRickshaws, rickshawsQueryData]);
 
   const activeSpots = useMemo(() => {
     if (spotsData.length > 0) {
@@ -124,9 +171,12 @@ export default function Map() {
       return activeSpots.slice(0, 6).map((spot, index) => ({
         id: `fallback-${spot.id}-${index}`,
         currentSpotId: spot.id,
+        latitude: Number(spot.latitude),
+        longitude: Number(spot.longitude),
         batteryLevel: 80 - index * 5,
         isAvailable: index % 3 !== 0,
         isCharging: index % 5 === 0,
+        heading: 0,
       }));
     }
     return [];
@@ -184,16 +234,15 @@ export default function Map() {
         zoomControl.addTo(map);
 
         // Add tile layer
-        window.L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-          subdomains: 'abcd',
-          maxZoom: 20
+        window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+          maxZoom: 19
         }).addTo(map);
 
         mapInstanceRef.current = map;
         setMapReady(true);
         setMapLoading(false);
-        
+
       } catch (error) {
         console.error('Error initializing map:', error);
         setMapLoading(false);
@@ -207,10 +256,22 @@ export default function Map() {
 
     initMap();
 
+    // Map resize handler
+    const resizeObserver = new ResizeObserver(() => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize();
+      }
+    });
+
+    if (mapRef.current) {
+      resizeObserver.observe(mapRef.current);
+    }
+
     return () => {
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
       }
+      resizeObserver.disconnect();
     };
   }, [mapReady, toast]);
 
@@ -219,7 +280,7 @@ export default function Map() {
     if (!mapInstanceRef.current || !activeSpots || !rickshaws || !mapReady) return;
 
     const map = mapInstanceRef.current;
-    
+
     // Clear existing markers
     map.eachLayer((layer: any) => {
       if (layer instanceof window.L.Marker || layer instanceof window.L.CircleMarker) {
@@ -229,52 +290,52 @@ export default function Map() {
 
     // Add spot markers
     activeSpots.forEach((spot: Spot, index: number) => {
-        const availableAirbears = rickshaws.filter(r => r.currentSpotId === spot.id && r.isAvailable);
-        const hasAirbears = availableAirbears.length > 0;
-        const spotNumber = index + 1;
-        const latitude = Number(spot.latitude);
-        const longitude = Number(spot.longitude);
-        if (Number.isNaN(latitude) || Number.isNaN(longitude)) {
-          return;
-        }
-        
-        // Create marker color based on availability
-        const markerColor = hasAirbears ? '#10b981' : '#6b7280'; // Green if available, gray if not
-        
-        const iconHtml = renderToString(
-          <AirbearAvatar
-            size="sm"
-            showBadge={false}
-            className={`
+      const availableAirbears = rickshaws.filter(r => r.currentSpotId === spot.id && r.isAvailable);
+      const hasAirbears = availableAirbears.length > 0;
+      const spotNumber = index + 1;
+      const latitude = Number(spot.latitude);
+      const longitude = Number(spot.longitude);
+      if (Number.isNaN(latitude) || Number.isNaN(longitude)) {
+        return;
+      }
+
+      // Create marker color based on availability
+      const markerColor = hasAirbears ? '#10b981' : '#6b7280'; // Green if available, gray if not
+
+      const iconHtml = renderToString(
+        <AirbearAvatar
+          size="sm"
+          showBadge={false}
+          className={`
               transition-all duration-300
               ${hasAirbears ? 'shadow-lg shadow-green-500/50 scale-110' : 'opacity-50 grayscale'}
             `}
-          />
-        );
+        />
+      );
 
-        const marker = window.L.marker([latitude, longitude], {
-          icon: new window.L.DivIcon({
-            html: iconHtml,
-            className: 'bg-transparent border-0',
-            iconSize: [48, 48],
-            iconAnchor: [24, 48],
-            popupAnchor: [0, -48]
-          }),
+      const marker = window.L.marker([latitude, longitude], {
+        icon: new window.L.DivIcon({
+          html: iconHtml,
+          className: 'bg-transparent border-0',
+          iconSize: [48, 48],
+          iconAnchor: [24, 48],
+          popupAnchor: [0, -48]
+        }),
+      }).addTo(map);
+
+      if (hasAirbears) {
+        const pulsingIcon = window.L.circleMarker([latitude, longitude], {
+          radius: 25,
+          fillColor: '#10b981',
+          fillOpacity: 0.3,
+          color: '#10b981',
+          weight: 1,
+          opacity: 0.5,
         }).addTo(map);
 
-        if (hasAirbears) {
-          const pulsingIcon = window.L.circleMarker([latitude, longitude], {
-            radius: 25,
-            fillColor: '#10b981',
-            fillOpacity: 0.3,
-            color: '#10b981',
-            weight: 1,
-            opacity: 0.5,
-          }).addTo(map);
-
-          // Add a pulsing animation using CSS
-          pulsingIcon.getElement().style.animation = 'pulse 2s infinite';
-        }
+        // Add a pulsing animation using CSS
+        pulsingIcon.getElement().style.animation = 'pulse 2s infinite';
+      }
 
       // Add popup
       const popupContent = `
@@ -316,7 +377,7 @@ export default function Map() {
       `;
 
       marker.bindPopup(popupContent);
-      
+
       // Add click handler
       marker.on('click', () => {
         if (hasAirbears) {
@@ -326,16 +387,107 @@ export default function Map() {
       });
     });
 
+    // Add real-time airbear markers
+    rickshaws.forEach((airbear) => {
+      const latitude = Number(airbear.latitude);
+      const longitude = Number(airbear.longitude);
+
+      if (Number.isNaN(latitude) || Number.isNaN(longitude) || latitude === 0 || longitude === 0) {
+        return; // Skip invalid coordinates
+      }
+
+      // Create animated airbear marker
+      const airbearIconHtml = `
+        <div style="position: relative; width: 40px; height: 40px;">
+          <div style="
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(${airbear.heading || 0}deg);
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            animation: pulse 2s infinite;
+          ">
+            🐻
+          </div>
+          ${airbear.isCharging ? `
+            <div style="
+              position: absolute;
+              top: -5px;
+              right: -5px;
+              width: 16px;
+              height: 16px;
+              background: #fbbf24;
+              border-radius: 50%;
+              border: 2px solid white;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 10px;
+            ">⚡</div>
+          ` : ''}
+        </div>
+      `;
+
+      const airbearMarker = window.L.marker([latitude, longitude], {
+        icon: new window.L.DivIcon({
+          html: airbearIconHtml,
+          className: 'bg-transparent border-0',
+          iconSize: [40, 40],
+          iconAnchor: [20, 20],
+          popupAnchor: [0, -20]
+        }),
+        zIndexOffset: 1000 // Ensure airbears appear above spots
+      }).addTo(map);
+
+      // Add popup for airbear
+      const airbearPopup = `
+        <div class="p-3 min-w-[200px] bg-white rounded-lg shadow-lg">
+          <div class="flex items-center mb-2">
+            <div class="text-2xl mr-2">🐻</div>
+            <div>
+              <div class="font-bold text-sm">AirBear ${airbear.id.split('-').pop()}</div>
+              <div class="text-xs text-gray-500">Live Position</div>
+            </div>
+          </div>
+          <div class="space-y-1 text-xs">
+            <div class="flex justify-between">
+              <span class="text-gray-600">Battery:</span>
+              <span class="font-semibold ${airbear.batteryLevel > 50 ? 'text-green-600' : 'text-orange-600'}">
+                ${airbear.batteryLevel}%
+              </span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">Status:</span>
+              <span class="font-semibold ${airbear.isAvailable ? 'text-green-600' : 'text-gray-600'}">
+                ${airbear.isCharging ? '⚡ Charging' : airbear.isAvailable ? '✓ Available' : 'In Use'}
+              </span>
+            </div>
+          </div>
+        </div>
+      `;
+
+      airbearMarker.bindPopup(airbearPopup);
+    });
+
     // Add custom locate button
-    const locateButton = window.L.control({position: 'topleft'});
-    locateButton.onAdd = function() {
+    const locateButton = window.L.control({ position: 'topleft' });
+    locateButton.onAdd = function () {
       const div = window.L.DomUtil.create('div', 'leaflet-bar leaflet-control');
       div.innerHTML = `
         <a href="#" title="Center Map" style="background: white; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; text-decoration: none; color: black;">
           📍
         </a>
       `;
-      div.onclick = function(e: MouseEvent) {
+      div.onclick = function (e: MouseEvent) {
         e.preventDefault();
         if (mapInstanceRef.current) {
           mapInstanceRef.current.setView([42.0987, -75.9179], 12);
@@ -356,7 +508,7 @@ export default function Map() {
 
   }, [activeSpots, rickshaws, mapReady]);
 
-  const handleBookRide = () => {
+  const handleBookRide = async () => {
     if (!selectedSpot || !selectedDestination) {
       toast({
         title: "Missing Information",
@@ -368,15 +520,43 @@ export default function Map() {
 
     const distance = calculateDistanceKm(selectedSpot, selectedDestination) || 0;
     const fare = estimateRideFare(distance);
-    
-    toast({
-      title: "🎉 Demo Booking Complete!",
-      description: `Your AirBear ride from ${selectedSpot.name} to ${selectedDestination.name} would cost $${fare.toFixed(2)}. This is a demo - in production this would connect to our booking system.`,
-    });
-    
-    setShowBookingDialog(false);
-    setSelectedSpot(null);
-    setSelectedDestination(null);
+
+    try {
+      const supabase = getSupabaseClient(false);
+      if (!supabase) throw new Error("Supabase client not available");
+
+      const { data, error } = await supabase
+        .from('rides')
+        .insert({
+          user_id: user?.id,
+          pickup_spot_id: selectedSpot.id,
+          dropoff_spot_id: selectedDestination.id,
+          airbear_id: '00000000-0000-0000-0000-000000000001', // Seed this in DB
+          fare,
+          distance,
+          status: 'pending'
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: "🎉 Ride Booked!",
+        description: `Your AirBear ride from ${selectedSpot.name} to ${selectedDestination.name} has been placed. Cost: $${fare.toFixed(2)}.`,
+      });
+
+      setShowBookingDialog(false);
+      setSelectedSpot(null);
+      setSelectedDestination(null);
+    } catch (err: any) {
+      console.error("Booking error:", err);
+      toast({
+        title: "Booking Failed",
+        description: err.message || "An error occurred while booking your ride.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (mapLoading || spotsLoading || rickshawLoading) {
@@ -397,7 +577,7 @@ export default function Map() {
     <div className="min-h-screen py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <motion.div 
+        <motion.div
           className="text-center mb-8"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -439,12 +619,12 @@ export default function Map() {
           transition={{ duration: 0.8, delay: 0.2 }}
         >
           <div className="aspect-video rounded-xl overflow-hidden relative shadow-inner">
-            <div 
-              ref={mapRef} 
+            <div
+              ref={mapRef}
               className="w-full h-full rounded-xl"
               data-testid="map-container"
             />
-            
+
             {/* Live Stats Overlay */}
             <div className="absolute bottom-4 left-4 bg-card/95 backdrop-blur-md rounded-xl p-4 shadow-xl border">
               <div className="flex items-center space-x-6 text-sm">
@@ -491,7 +671,7 @@ export default function Map() {
         </motion.div>
 
         {/* Spots Grid */}
-        <motion.div 
+        <motion.div
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -499,10 +679,10 @@ export default function Map() {
         >
           {activeSpots.map((spot: Spot, index: number) => {
             const availableAirbears = rickshaws.filter(r => r.currentSpotId === spot.id && r.isAvailable);
-            const avgBattery = availableAirbears.length > 0 
+            const avgBattery = availableAirbears.length > 0
               ? Math.round(availableAirbears.reduce((sum, r) => sum + r.batteryLevel, 0) / availableAirbears.length)
               : 0;
-            
+
             return (
               <motion.div
                 key={spot.id}
@@ -510,7 +690,7 @@ export default function Map() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
               >
-                <Card 
+                <Card
                   className="hover-lift cursor-pointer group"
                   onClick={() => {
                     if (availableAirbears.length > 0) {
@@ -523,8 +703,8 @@ export default function Map() {
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg flex items-center justify-between">
                       <span className="truncate">{spot.name}</span>
-                      <RickshawWheel 
-                        size="sm" 
+                      <RickshawWheel
+                        size="sm"
                         animated={availableAirbears.length > 0}
                         className={availableAirbears.length > 0 ? "text-primary" : "text-muted-foreground"}
                       />
@@ -533,7 +713,7 @@ export default function Map() {
                   <CardContent className="space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Available</span>
-                      <Badge 
+                      <Badge
                         variant={availableAirbears.length > 0 ? "default" : "secondary"}
                         className={availableAirbears.length > 0 ? "bg-green-500" : ""}
                       >
@@ -561,8 +741,8 @@ export default function Map() {
                       </>
                     )}
 
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
                       className="w-full eco-gradient text-white"
                       disabled={availableAirbears.length === 0}
                       data-testid={`button-book-from-${spot.name.toLowerCase().replace(/\s+/g, '-')}`}
@@ -585,7 +765,7 @@ export default function Map() {
                 Book Your Ride (Demo)
               </DialogTitle>
             </DialogHeader>
-            
+
             <div className="space-y-6">
               {/* Pickup Location */}
               <div className="space-y-2">
@@ -605,11 +785,10 @@ export default function Map() {
                   {activeSpots.filter(s => s.id !== selectedSpot?.id).map((spot) => (
                     <div
                       key={spot.id}
-                      className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                        selectedDestination?.id === spot.id 
-                          ? "bg-primary/20 border border-primary" 
-                          : "bg-muted/10 hover:bg-muted/20"
-                      }`}
+                      className={`p-3 rounded-lg cursor-pointer transition-colors ${selectedDestination?.id === spot.id
+                        ? "bg-primary/20 border border-primary"
+                        : "bg-muted/10 hover:bg-muted/20"
+                        }`}
                       onClick={() => setSelectedDestination(spot)}
                       data-testid={`option-destination-${spot.name.toLowerCase().replace(/\s+/g, '-')}`}
                     >
@@ -653,7 +832,7 @@ export default function Map() {
                 </div>
               )}
 
-              <Button 
+              <Button
                 onClick={handleBookRide}
                 disabled={!selectedDestination}
                 className="w-full eco-gradient text-white hover-lift"

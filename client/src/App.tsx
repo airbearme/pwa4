@@ -20,6 +20,7 @@ import Privacy from "@/pages/privacy";
 import Terms from "@/pages/terms";
 import Challenges from "@/pages/challenges";
 import Rewards from "@/pages/rewards";
+import DriverDashboard from "@/pages/driver-dashboard";
 import NotFound from "@/pages/not-found";
 
 // Components
@@ -32,7 +33,7 @@ function Router() {
     <div className="min-h-screen flex flex-col relative overflow-x-hidden">
       <ParticleSystem />
       <Header />
-      
+
       <main className="flex-1 relative z-10">
         <Switch>
           <Route path="/" component={Home} />
@@ -43,6 +44,7 @@ function Router() {
           <Route path="/checkout" component={Checkout} />
           <Route path="/challenges" component={Challenges} />
           <Route path="/rewards" component={Rewards} />
+          <Route path="/driver-dashboard" component={DriverDashboard} />
           <Route path="/promo" component={Promo} />
           <Route path="/support" component={Support} />
           <Route path="/safety" component={Safety} />
@@ -51,7 +53,7 @@ function Router() {
           <Route component={NotFound} />
         </Switch>
       </main>
-      
+
       <Footer />
     </div>
   );

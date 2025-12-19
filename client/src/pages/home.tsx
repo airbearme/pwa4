@@ -7,6 +7,7 @@ import CeoTshirtPromo from "@/components/ceo-tshirt-promo";
 import AirbearAvatar from "@/components/airbear-avatar";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { getSupabaseClient } from "@/lib/supabase-client";
 import { Loader2, Crown } from "lucide-react";
 import { useState } from "react";
 
@@ -22,13 +23,48 @@ type Analytics = {
 
 export default function Home() {
   const [showCeoPromo, setShowCeoPromo] = useState(false);
-  
+
   const { data: spots, isLoading } = useQuery({
-    queryKey: ["/api/spots"],
+    queryKey: ["spots"],
+    queryFn: async () => {
+      const supabase = getSupabaseClient(false);
+      if (!supabase) return [];
+      const { data, error } = await supabase.from('spots').select('*').eq('is_active', true);
+      if (error) throw error;
+      return data || [];
+    }
   });
 
   const { data: analytics } = useQuery<Analytics>({
-    queryKey: ["/api/analytics/overview"],
+    queryKey: ["analytics", "overview"],
+    queryFn: async () => {
+      const supabase = getSupabaseClient(false);
+      if (!supabase) return {
+        totalSpots: 16,
+        totalRickshaws: 1,
+        activeRickshaws: 1,
+        chargingRickshaws: 0,
+        maintenanceRickshaws: 0,
+        averageBatteryLevel: 95
+      };
+
+      const [spotsRes, airbearsRes] = await Promise.all([
+        supabase.from('spots').select('id', { count: 'exact', head: true }).eq('is_active', true),
+        supabase.from('airbears').select('*')
+      ]);
+
+      const airbears = airbearsRes.data || [];
+      return {
+        totalSpots: spotsRes.count || 0,
+        totalRickshaws: airbears.length,
+        activeRickshaws: airbears.filter((a: any) => a.is_available).length,
+        chargingRickshaws: airbears.filter((a: any) => a.is_charging).length,
+        maintenanceRickshaws: 0,
+        averageBatteryLevel: airbears.length > 0
+          ? Math.round(airbears.reduce((sum: number, a: any) => sum + (a.battery_level || 0), 0) / airbears.length)
+          : 0
+      };
+    }
   });
 
   return (
@@ -38,14 +74,14 @@ export default function Home() {
         {/* Animated Background */}
         <div className="absolute inset-0 opacity-20">
           <div className="absolute bottom-0 w-full h-64 bg-gradient-to-t from-emerald-900/20 to-transparent"></div>
-          <motion.div 
+          <motion.div
             className="absolute top-1/2 left-1/4"
             animate={{ y: [-10, 10, -10] }}
             transition={{ duration: 6, repeat: Infinity }}
           >
             <AirbearWheel size="lg" className="opacity-30" effectType="solar" />
           </motion.div>
-          <motion.div 
+          <motion.div
             className="absolute top-1/3 right-1/4"
             animate={{ y: [10, -10, 10] }}
             transition={{ duration: 6, repeat: Infinity, delay: 1 }}
@@ -56,15 +92,15 @@ export default function Home() {
 
         <div className="relative z-10 text-center px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
           {/* Mascot Image */}
-          <motion.div 
+          <motion.div
             className="mb-8"
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ duration: 0.8, type: "spring" }}
           >
-            <img 
-              src="/airbear-mascot.png" 
-              alt="Friendly brown bear mascot with pilot goggles representing AirBear" 
+            <img
+              src="/airbear-mascot.png"
+              alt="Friendly brown bear mascot with pilot goggles representing AirBear"
               className="mx-auto rounded-full w-32 h-32 object-cover border-4 border-primary/30 hover-lift animate-pulse-glow"
               data-testid="img-mascot"
             />
@@ -82,7 +118,7 @@ export default function Home() {
             <AirbearAvatar size="sm" className="scale-90" />
           </motion.div>
 
-          <motion.h1 
+          <motion.h1
             className="text-4xl sm:text-6xl lg:text-7xl font-bold mb-6 relative"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -93,7 +129,7 @@ export default function Home() {
             </span>
             <br />
             <span className="text-foreground airbear-solar-rays">Solar Powered Rideshare</span>
-            
+
             {/* Holographic overlay effect */}
             <div className="absolute inset-0 pointer-events-none">
               {Array.from({ length: 8 }, (_, i) => (
@@ -118,30 +154,30 @@ export default function Home() {
               ))}
             </div>
           </motion.h1>
-          
-          <motion.p 
+
+          <motion.p
             className="text-xl sm:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto leading-relaxed airbear-eco-breeze"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.4 }}
           >
-            <span className="text-primary font-bold animate-shimmer">Experience the future of sustainable transportation!</span> 
+            <span className="text-primary font-bold animate-shimmer">Experience the future of sustainable transportation!</span>
             <br />
-            Solar-powered vehicles with onboard shopping experiences, 
-            <span className="text-emerald-500 font-semibold airbear-god-rays"> zero emissions</span>, and 
+            Solar-powered vehicles with onboard shopping experiences,
+            <span className="text-emerald-500 font-semibold airbear-god-rays"> zero emissions</span>, and
             <span className="text-amber-500 font-semibold"> revolutionary eco-mobility!</span>
           </motion.p>
 
           {/* CTA Buttons */}
-          <motion.div 
+          <motion.div
             className="flex flex-col sm:flex-row gap-4 justify-center mb-12"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.6 }}
           >
             <Link to="/map">
-              <Button 
-                size="lg" 
+              <Button
+                size="lg"
                 className="group relative eco-gradient text-white hover-lift ripple-effect px-8 py-4 text-lg font-semibold animate-neon-glow"
                 data-testid="button-book-airbear"
               >
@@ -149,8 +185,8 @@ export default function Home() {
                 Book Your AirBear
               </Button>
             </Link>
-            
-            <Button 
+
+            <Button
               size="lg"
               onClick={() => setShowCeoPromo(true)}
               className="bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-500 text-white hover-lift ripple-effect px-8 py-4 text-lg font-semibold animate-pulse-glow"
@@ -159,9 +195,9 @@ export default function Home() {
               <Crown className="mr-3 h-6 w-6" />
               CEO T-Shirt $100
             </Button>
-            
-            <Button 
-              variant="outline" 
+
+            <Button
+              variant="outline"
               size="lg"
               className="border-2 border-primary text-primary hover:bg-primary/10 px-8 py-4 text-lg font-semibold hover-lift ripple-effect"
               data-testid="button-watch-demo"
@@ -175,7 +211,7 @@ export default function Home() {
           </motion.div>
 
           {/* Stats */}
-          <motion.div 
+          <motion.div
             className="grid grid-cols-2 sm:grid-cols-4 gap-6 max-w-2xl mx-auto"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -212,7 +248,7 @@ export default function Home() {
       {/* Features Section */}
       <section className="relative py-20 bg-gradient-to-b from-transparent to-emerald-50/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div 
+          <motion.div
             className="text-center mb-16"
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -313,11 +349,11 @@ export default function Home() {
             <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
               Join thousands of Binghamton residents who are making a difference, one ride at a time
             </p>
-            
+
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/auth">
-                <Button 
-                  size="lg" 
+                <Button
+                  size="lg"
                   variant="secondary"
                   className="bg-white text-emerald-600 hover:bg-white/90 px-8 py-4 text-lg font-semibold hover-lift"
                   data-testid="button-get-started"
@@ -326,10 +362,10 @@ export default function Home() {
                   Get Started Today
                 </Button>
               </Link>
-              
+
               <Link to="/map">
-                <Button 
-                  size="lg" 
+                <Button
+                  size="lg"
                   variant="outline"
                   className="border-2 border-white text-white hover:bg-white/10 px-8 py-4 text-lg font-semibold hover-lift"
                   data-testid="button-explore-map"
@@ -342,11 +378,11 @@ export default function Home() {
           </motion.div>
         </div>
       </section>
-      
+
       {/* CEO T-Shirt Promo Dialog */}
-      <CeoTshirtPromo 
-        isOpen={showCeoPromo} 
-        onClose={() => setShowCeoPromo(false)} 
+      <CeoTshirtPromo
+        isOpen={showCeoPromo}
+        onClose={() => setShowCeoPromo(false)}
       />
     </div>
   );

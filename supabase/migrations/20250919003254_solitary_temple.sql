@@ -286,6 +286,11 @@ INSERT INTO advertising_packages (name, description, price, features, includes_l
 ('Gold Package', 'Premium website placement plus AirBear LED banner advertisements', 599.99, ARRAY['Premium website placement', 'LED banner ads', 'Advanced analytics', 'Bi-weekly reporting', 'Social media mentions'], true, false, true),
 ('Platinum Package', 'Full integration with website, LED banners, and 35+ inch screen advertisements', 999.99, ARRAY['Full website integration', 'LED banner ads', 'Screen advertisements', 'Real-time analytics', 'Weekly reporting', 'Social media campaign', 'Priority support'], true, true, true);
 
+-- Seed a test AirBear
+INSERT INTO airbears (id, battery_level, is_available, maintenance_status)
+VALUES ('00000000-0000-0000-0000-000000000001', 100, true, 'excellent')
+ON CONFLICT (id) DO NOTHING;
+
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);

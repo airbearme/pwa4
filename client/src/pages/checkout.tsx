@@ -12,12 +12,12 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import RickshawWheel from "@/components/airbear-wheel";
 import LoadingSpinner from "@/components/loading-spinner";
-import { 
-  CreditCard, 
-  Smartphone, 
-  QrCode, 
-  CheckCircle, 
-  Apple, 
+import {
+  CreditCard,
+  Smartphone,
+  QrCode,
+  CheckCircle,
+  Apple,
   Wallet,
   Zap
 } from "lucide-react";
@@ -72,7 +72,7 @@ function CheckoutForm({ clientSecret, orderId, rideId, onSuccess }: CheckoutForm
       }
     } catch (error: any) {
       toast({
-        title: "Payment Error", 
+        title: "Payment Error",
         description: error.message || "An unexpected error occurred",
         variant: "destructive",
       });
@@ -84,8 +84,8 @@ function CheckoutForm({ clientSecret, orderId, rideId, onSuccess }: CheckoutForm
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <PaymentElement />
-      
-      <Button 
+
+      <Button
         type="submit"
         disabled={!stripe || isProcessing}
         className="w-full eco-gradient text-white hover-lift animate-pulse-glow"
@@ -119,7 +119,7 @@ export default function Checkout() {
   // Sample order data - in real app this would come from cart/order context
   const orderData = {
     orderId: "order_123",
-    rideId: "ride_456", 
+    rideId: "ride_456",
     items: [
       { name: "Local Coffee Blend", price: 12.99, quantity: 1 },
       { name: "Fresh Produce Box", price: 24.99, quantity: 1 },
@@ -131,7 +131,28 @@ export default function Checkout() {
 
   const createPaymentIntentMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest("POST", "/api/create-payment-intent", data);
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      if (!supabaseUrl || !supabaseAnonKey) {
+        throw new Error("Supabase credentials missing");
+      }
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/create-payment-intent`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'apikey': supabaseAnonKey,
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.message || 'Failed to create payment intent');
+      }
+
       return response.json();
     },
     onSuccess: (data) => {
@@ -151,16 +172,21 @@ export default function Checkout() {
   });
 
   useEffect(() => {
-    // Check for success parameter in URL
+    // Check for success or clientSecret parameter in URL
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('success') === 'true') {
       setPaymentSuccess(true);
     }
+
+    const secret = urlParams.get('clientSecret');
+    if (secret) {
+      setClientSecret(secret);
+    }
   }, []);
 
   useEffect(() => {
-    // Initialize payment intent when method changes
-    if (orderData.total > 0) {
+    // Initialize payment intent when method changes, ONLY if not already provided via URL
+    if (orderData.total > 0 && !clientSecret) {
       createPaymentIntentMutation.mutate({
         amount: orderData.total,
         orderId: orderData.orderId,
@@ -168,7 +194,7 @@ export default function Checkout() {
         paymentMethod,
       });
     }
-  }, [paymentMethod]);
+  }, [paymentMethod, clientSecret]);
 
   const handlePaymentSuccess = () => {
     setPaymentSuccess(true);
@@ -285,17 +311,17 @@ export default function Checkout() {
               >
                 <CheckCircle className="h-10 w-10 text-white" />
               </motion.div>
-              
+
               <h2 className="text-2xl font-bold text-foreground mb-2">Payment Successful!</h2>
               <p className="text-muted-foreground mb-6">
                 Thank you for your purchase. Your order will be ready for pickup during your next ride.
               </p>
-              
+
               <div className="space-y-2 text-sm text-muted-foreground mb-6">
                 <p>Order ID: {orderData.orderId}</p>
                 <p>Total: ${orderData.total.toFixed(2)}</p>
               </div>
-              
+
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
@@ -303,7 +329,7 @@ export default function Checkout() {
               >
                 <RickshawWheel size="lg" />
               </motion.div>
-              
+
               <p className="text-sm text-muted-foreground">
                 Redirecting to dashboard...
               </p>
@@ -318,7 +344,7 @@ export default function Checkout() {
     <div className="min-h-screen py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <motion.div 
+        <motion.div
           className="text-center mb-8"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -356,9 +382,9 @@ export default function Checkout() {
                     <span className="font-medium">${(item.price * item.quantity).toFixed(2)}</span>
                   </div>
                 ))}
-                
+
                 <Separator />
-                
+
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>Subtotal</span>
@@ -373,7 +399,7 @@ export default function Checkout() {
                     <span className="text-primary">${orderData.total.toFixed(2)}</span>
                   </div>
                 </div>
-                
+
                 <div className="mt-6 p-4 bg-primary/10 rounded-lg">
                   <div className="flex items-center text-primary">
                     <CheckCircle className="h-5 w-5 mr-2" />
@@ -413,8 +439,8 @@ export default function Checkout() {
                   <TabsContent value="stripe" className="space-y-6">
                     {/* Payment Options */}
                     <div className="grid grid-cols-2 gap-3 mb-6">
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         className="h-16 border-2 hover:border-primary hover:bg-primary/5"
                         onClick={handleApplePay}
                         disabled={walletLoading.apple}
@@ -425,8 +451,8 @@ export default function Checkout() {
                           <span className="text-sm">{walletLoading.apple ? "Requesting..." : "Apple Pay"}</span>
                         </div>
                       </Button>
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         className="h-16 border-2 hover:border-primary hover:bg-primary/5"
                         onClick={handleGooglePay}
                         disabled={walletLoading.google}
@@ -449,9 +475,27 @@ export default function Checkout() {
                     </div>
 
                     {/* Stripe Payment Form */}
-                    {clientSecret ? (
+                    {clientSecret && clientSecret.startsWith('mock_') ? (
+                      <div className="space-y-4 text-center p-6 border rounded-lg bg-muted/10">
+                        <div className="flex justify-center mb-4">
+                          <div className="bg-yellow-100 p-3 rounded-full">
+                            <Zap className="h-6 w-6 text-yellow-600" />
+                          </div>
+                        </div>
+                        <h3 className="font-semibold text-lg">Demo Payment Mode</h3>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          This is a simulated payment environment. No actual card is charged.
+                        </p>
+                        <Button
+                          onClick={handlePaymentSuccess}
+                          className="w-full eco-gradient text-white hover-lift animate-pulse-glow"
+                        >
+                          Complete Demo Payment
+                        </Button>
+                      </div>
+                    ) : clientSecret ? (
                       <Elements stripe={stripePromise} options={{ clientSecret }}>
-                        <CheckoutForm 
+                        <CheckoutForm
                           clientSecret={clientSecret}
                           orderId={orderData.orderId}
                           rideId={orderData.rideId}
@@ -483,19 +527,19 @@ export default function Checkout() {
                           <QrCode className="h-20 w-20 text-muted-foreground" />
                         )}
                       </div>
-                      
+
                       <h3 className="font-semibold mb-2">Cash Payment</h3>
                       <p className="text-sm text-muted-foreground mb-4">
                         Pay with cash during your ride. The driver will scan this QR code to confirm payment.
                       </p>
-                      
+
                       <Badge variant="outline" className="border-primary text-primary">
                         Amount: ${orderData.total.toFixed(2)}
                       </Badge>
                     </div>
 
                     {qrCode && (
-                      <Button 
+                      <Button
                         onClick={handlePaymentSuccess}
                         className="w-full eco-gradient text-white hover-lift"
                         data-testid="button-confirm-cash-payment"

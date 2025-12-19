@@ -4,19 +4,9 @@ import App from "./App";
 import "./index.css";
 
 console.log("main.tsx loaded!");
-
-// Register service worker for PWA functionality
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then((registration) => {
-        console.log('SW registered: ', registration);
-      })
-      .catch((registrationError) => {
-        console.log('SW registration failed: ', registrationError);
-      });
-  });
-}
+// @ts-ignore
+console.log(`🚀 AirBear Build: ${import.meta.env.__APP_VERSION__ || 'Production'}`);
+console.log(`🛡️ Stripe Key: ${import.meta.env.VITE_STRIPE_PUBLIC_KEY ? 'Set' : 'MISSING'}`);
 
 const container = document.getElementById("root");
 console.log("Root container:", container);

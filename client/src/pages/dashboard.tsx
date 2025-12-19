@@ -14,21 +14,25 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
+import { getSupabaseClient } from "@/lib/supabase-client";
 import RickshawWheel from "@/components/airbear-wheel";
 import LoadingSpinner from "@/components/loading-spinner";
-import { 
-  Leaf, 
-  Battery, 
-  MapPin, 
-  ShoppingCart, 
-  TrendingUp, 
-  Users, 
+import {
+  Leaf,
+  Battery,
+  MapPin,
+  ShoppingCart,
+  TrendingUp,
+  Users,
   Zap,
   Award,
   Target,
-  Calendar
+  Calendar,
+  Navigation,
+  Activity
 } from "lucide-react";
 import NotificationSettings from "@/components/notification-settings";
+import { useAirbearLocationUpdates } from "@/hooks/use-driver-location";
 
 interface Analytics {
   totalSpots: number;
@@ -44,18 +48,70 @@ export default function Dashboard() {
   const [activeView, setActiveView] = useState("overview");
 
   const { data: rides, isLoading: ridesLoading } = useQuery<any[]>({
-    queryKey: ["/api/rides/user", user?.id],
+    queryKey: ["rides", user?.id],
+    queryFn: async () => {
+      const supabase = getSupabaseClient(false);
+      if (!supabase) return [];
+      const { data, error } = await supabase
+        .from('rides')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
     enabled: !!user?.id,
   });
 
   const { data: orders, isLoading: ordersLoading } = useQuery({
-    queryKey: ["/api/orders/user", user?.id], 
+    queryKey: ["orders", user?.id],
+    queryFn: async () => {
+      const supabase = getSupabaseClient(false);
+      if (!supabase) return [];
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
     enabled: !!user?.id,
   });
 
   const { data: analytics } = useQuery<Analytics>({
-    queryKey: ["/api/analytics/overview"],
+    queryKey: ["analytics", "overview"],
+    queryFn: async () => {
+      const supabase = getSupabaseClient(false);
+      if (!supabase) return {
+        totalSpots: 16,
+        totalAirbears: 1,
+        activeAirbears: 1,
+        chargingAirbears: 0,
+        maintenanceAirbears: 0,
+        averageBatteryLevel: 95
+      };
+
+      const [spotsRes, airbearsRes] = await Promise.all([
+        supabase.from('spots').select('id', { count: 'exact', head: true }).eq('is_active', true),
+        supabase.from('airbears').select('*')
+      ]);
+
+      const airbears = airbearsRes.data || [];
+      return {
+        totalSpots: spotsRes.count || 0,
+        totalAirbears: airbears.length,
+        activeAirbears: airbears.filter((a: any) => a.is_available).length,
+        chargingAirbears: airbears.filter((a: any) => a.is_charging).length,
+        maintenanceAirbears: 0,
+        averageBatteryLevel: airbears.length > 0
+          ? Math.round(airbears.reduce((sum: number, a: any) => sum + (a.battery_level || 0), 0) / airbears.length)
+          : 0
+      };
+    }
   });
+
+  const liveFleet = useAirbearLocationUpdates();
 
   if (!user) {
     return (
@@ -68,7 +124,7 @@ export default function Dashboard() {
   const renderUserDashboard = () => (
     <div className="space-y-8">
       {/* Welcome Section */}
-      <motion.div 
+      <motion.div
         className="text-center py-8"
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
@@ -126,7 +182,7 @@ export default function Dashboard() {
       </motion.div>
 
       {/* Quick Actions Grid */}
-      <motion.div 
+      <motion.div
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
@@ -185,7 +241,7 @@ export default function Dashboard() {
       </motion.div>
 
       {/* Stats Grid */}
-      <motion.div 
+      <motion.div
         className="grid grid-cols-1 md:grid-cols-3 gap-6"
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
@@ -312,7 +368,7 @@ export default function Dashboard() {
 
   const renderDriverDashboard = () => (
     <div className="space-y-8">
-      <motion.div 
+      <motion.div
         className="text-center py-8"
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
@@ -335,7 +391,7 @@ export default function Dashboard() {
       </motion.div>
 
       {/* Driver Stats */}
-      <motion.div 
+      <motion.div
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
@@ -399,7 +455,7 @@ export default function Dashboard() {
 
   const renderAdminDashboard = () => (
     <div className="space-y-8">
-      <motion.div 
+      <motion.div
         className="text-center py-8"
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
@@ -422,7 +478,7 @@ export default function Dashboard() {
       </motion.div>
 
       {/* Fleet Overview */}
-      <motion.div 
+      <motion.div
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
@@ -482,6 +538,107 @@ export default function Dashboard() {
             <div className="text-3xl font-bold text-purple-500 mb-2">1.2K</div>
             <p className="text-sm text-muted-foreground">Monthly active</p>
           </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Live Fleet Tracking */}
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, delay: 0.4 }}
+      >
+        <Card className="glass-morphism overflow-hidden">
+          <CardHeader className="border-b bg-muted/10">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-xl">Live Fleet Tracking</CardTitle>
+                <CardDescription>Real-time location and status of all AirBears</CardDescription>
+              </div>
+              <Link to="/map">
+                <Button size="sm" className="eco-gradient text-white">
+                  <MapPin className="mr-2 h-4 w-4" />
+                  View Full Map
+                </Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-muted/30 text-muted-foreground uppercase text-xs">
+                    <th className="px-6 py-4 text-left font-semibold">Vehicle</th>
+                    <th className="px-6 py-4 text-left font-semibold">Status</th>
+                    <th className="px-6 py-4 text-left font-semibold">Location</th>
+                    <th className="px-6 py-4 text-left font-semibold">Battery</th>
+                    <th className="px-6 py-4 text-right font-semibold">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {liveFleet.length > 0 ? (
+                    liveFleet.map((bear: any, index: number) => (
+                      <motion.tr
+                        key={bear.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        className="hover:bg-muted/10 transition-colors"
+                      >
+                        <td className="px-6 py-4">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-xl">
+                              🐻
+                            </div>
+                            <div>
+                              <div className="font-bold">{bear.id}</div>
+                              <div className="text-xs text-muted-foreground">Heading: {Math.round(bear.heading || 0)}°</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <Badge variant={bear.is_available ? "default" : "secondary"} className={bear.is_available ? "bg-green-500" : ""}>
+                            {bear.is_available ? "Available" : "In Service"}
+                          </Badge>
+                          {bear.is_charging && (
+                            <Badge variant="secondary" className="ml-2 bg-amber-500/10 text-amber-600 border-amber-200">
+                              <Zap className="h-3 w-3 mr-1" />
+                              Charging
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 font-mono text-xs">
+                          {bear.latitude?.toFixed(5)}, {bear.longitude?.toFixed(5)}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center space-x-2 w-24">
+                            <Progress value={bear.battery_level} className="h-1.5" />
+                            <span className="text-xs font-medium">{bear.battery_level}%</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-primary">
+                            <Navigation className="h-4 w-4" />
+                          </Button>
+                        </td>
+                      </motion.tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground italic">
+                        No active AirBears found in the fleet.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+          <div className="p-4 bg-muted/5 border-t text-center">
+            <div className="flex items-center justify-center space-x-2 text-xs text-muted-foreground">
+              <Activity className="h-3 w-3 text-green-500 animate-pulse" />
+              <span>Real-time tracking active • Syncing with Supabase</span>
+            </div>
+          </div>
         </Card>
       </motion.div>
     </div>

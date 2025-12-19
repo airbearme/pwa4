@@ -37,17 +37,26 @@ export interface PaymentResult {
 
 export const createPaymentIntent = async (data: PaymentIntentData): Promise<PaymentResult> => {
   try {
-    const response = await fetch('/api/create-payment-intent', {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error("Supabase credentials missing for payment processing");
+    }
+
+    const response = await fetch(`${supabaseUrl}/functions/v1/create-payment-intent`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabaseAnonKey}`,
+        'apikey': supabaseAnonKey,
       },
       body: JSON.stringify(data),
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Failed to create payment intent');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || errorData.message || 'Failed to create payment intent');
     }
 
     const result = await response.json();
@@ -64,6 +73,7 @@ export const createPaymentIntent = async (data: PaymentIntentData): Promise<Paym
       paymentIntent: result,
     };
   } catch (error: any) {
+    console.error("Payment Intent Error:", error);
     return {
       success: false,
       error: error.message || 'Payment setup failed',
@@ -107,7 +117,7 @@ export const confirmPayment = async (
 
 export const processApplePayPayment = async (data: PaymentIntentData): Promise<PaymentResult> => {
   const stripe = await getStripe();
-  
+
   if (!stripe) {
     return {
       success: false,
@@ -151,7 +161,7 @@ export const processApplePayPayment = async (data: PaymentIntentData): Promise<P
     });
 
     const canMakePayment = await paymentRequest.canMakePayment();
-    
+
     if (!canMakePayment || !canMakePayment.applePay) {
       return {
         success: false,
@@ -195,7 +205,7 @@ export const processApplePayPayment = async (data: PaymentIntentData): Promise<P
 
 export const processGooglePayPayment = async (data: PaymentIntentData): Promise<PaymentResult> => {
   const stripe = await getStripe();
-  
+
   if (!stripe) {
     return {
       success: false,
@@ -239,7 +249,7 @@ export const processGooglePayPayment = async (data: PaymentIntentData): Promise<
     });
 
     const canMakePayment = await paymentRequest.canMakePayment();
-    
+
     if (!canMakePayment || !canMakePayment.googlePay) {
       return {
         success: false,
@@ -331,54 +341,39 @@ export const confirmCashPayment = async (qrCode: string, driverId: string): Prom
 
 // CEO T-shirt purchase integration
 export const purchaseCeoTshirt = async (data: PaymentIntentData & { size: string }): Promise<PaymentResult> => {
-  try {
-    const response = await fetch('/api/ceo-tshirt/purchase', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        ...data,
-        amount: 10000, // $100.00 in cents
-        metadata: {
-          ...data.metadata,
-          product_type: 'ceo_tshirt',
-          size: data.size,
-          unlimited_rides: 'true',
-          non_transferable: 'true'
-        }
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Failed to purchase CEO T-shirt');
+  return createPaymentIntent({
+    ...data,
+    amount: 100, // $100.00
+    metadata: {
+      ...data.metadata,
+      product_type: 'ceo_tshirt',
+      size: data.size,
+      unlimited_rides: 'true',
+      non_transferable: 'true'
     }
-
-    const result = await response.json();
-    return {
-      success: true,
-      paymentIntent: result,
-    };
-  } catch (error: any) {
-    return {
-      success: false,
-      error: error.message || 'CEO T-shirt purchase failed',
-    };
-  }
+  });
 };
 
 // Free ride validation for CEO T-shirt holders
 export const validateFreeRide = async (userId: string): Promise<{ canRideFree: boolean; reason?: string }> => {
   try {
-    const response = await fetch(`/api/users/${userId}/free-ride-status`);
-    
-    if (!response.ok) {
-      throw new Error('Failed to validate free ride status');
+    const { getSupabaseClient } = await import("./supabase-client");
+    const supabase = getSupabaseClient(false);
+    if (!supabase) throw new Error("Supabase unavailable");
+
+    const { data, error } = await supabase
+      .from('users')
+      .select('has_ceo_tshirt, tshirt_purchase_date')
+      .eq('id', userId)
+      .single();
+
+    if (error) throw error;
+
+    if (data?.has_ceo_tshirt) {
+      return { canRideFree: true };
     }
 
-    const result = await response.json();
-    return result;
+    return { canRideFree: false, reason: "No CEO T-shirt found" };
   } catch (error: any) {
     return {
       canRideFree: false,

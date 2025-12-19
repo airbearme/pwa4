@@ -15,9 +15,9 @@ const IONOS_CONFIG = {
     process.env.IONOS_FTP_HOST ||
     'access-5018328928.webspace-host.com',
   username: process.env.IONOS_SFTP_USER || process.env.IONOS_FTP_USER || 'a2096159',
-  password: process.env.IONOS_SFTP_PASSWORD || process.env.IONOS_FTP_PASSWORD || 'Yaa7Rih^_gpej+-',
+  password: process.env.IONOS_SFTP_PASSWORD || process.env.IONOS_FTP_PASSWORD || 'Danknugs420420',
   port: 22,
-  remoteBase: process.env.IONOS_REMOTE_BASE || '/',
+  remoteBase: process.env.IONOS_REMOTE_BASE || '/httpdocs',
 };
 
 console.log('🚀 Starting AirBear PWA deployment to IONOS...');
@@ -54,8 +54,23 @@ async function deploy() {
 
     console.log('📡 Connected to IONOS SFTP');
 
-    // 3a. Clean remote directory to remove old UI assets
-    console.log(`🧹 Cleaning remote directory: ${IONOS_CONFIG.remoteBase}`);
+    // 3a. Find the correct remote directory
+    let targetDir = IONOS_CONFIG.remoteBase;
+    const possibleDirs = ['/public_html', '/httpdocs', '/www', '/htdocs', '/public'];
+
+    for (const dir of possibleDirs) {
+      try {
+        await sftp.stat(dir);
+        targetDir = dir;
+        console.log(`✅ Found web directory: ${targetDir}`);
+        break;
+      } catch (err) {
+        continue;
+      }
+    }
+
+    // 3b. Clean remote directory to remove old UI assets
+    console.log(`🧹 Cleaning remote directory: ${targetDir}`);
 
     const removeDirContents = async (remoteDir) => {
       const list = await sftp.list(remoteDir);
@@ -80,7 +95,7 @@ async function deploy() {
       }
     };
 
-    await removeDirContents(IONOS_CONFIG.remoteBase);
+    await removeDirContents(targetDir);
     console.log('✅ Remote directory cleaned');
 
     // Upload files recursively
@@ -100,7 +115,7 @@ async function deploy() {
             // Directory might already exist, that's OK
             console.log(`📁 Directory exists: ${remotePath}`);
           }
-          
+
           await uploadDir(localPath, remotePath);
         } else {
           try {
@@ -113,8 +128,8 @@ async function deploy() {
       }
     }
 
-    await uploadDir(distPath, IONOS_CONFIG.remoteBase);
-    
+    await uploadDir(distPath, targetDir);
+
     await sftp.end();
     console.log('✅ Upload completed successfully');
 
