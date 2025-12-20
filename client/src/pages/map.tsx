@@ -379,7 +379,7 @@ export default function Map() {
     setSelectedDestination(null);
   };
 
-  if ((mapLoading || spotsLoading || rickshawLoading) && !import.meta.env.VITE_MAP_ALWAYS_RENDER) {
+  if (mapLoading || spotsLoading || rickshawLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
