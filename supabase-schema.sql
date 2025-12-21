@@ -82,44 +82,71 @@ ALTER TABLE public.rides ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for Spots (Public Read)
-CREATE POLICY "Spots are viewable by everyone" ON public.spots
-  FOR SELECT USING (true);
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Spots are viewable by everyone') THEN
+    CREATE POLICY "Spots are viewable by everyone" ON public.spots
+      FOR SELECT USING (true);
+  END IF;
+END $$;
 
 -- RLS Policies for Airbears (Public Read)
-CREATE POLICY "Airbears are viewable by everyone" ON public.airbears
-  FOR SELECT USING (true);
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Airbears are viewable by everyone') THEN
+    CREATE POLICY "Airbears are viewable by everyone" ON public.airbears
+      FOR SELECT USING (true);
+  END IF;
+END $$;
 
 -- RLS Policy for Drivers to update their assigned airbear
-CREATE POLICY "Drivers can update their assigned airbear" ON public.airbears
-  FOR UPDATE USING (
-    EXISTS (
-      SELECT 1 FROM public.users 
-      WHERE users.id = auth.uid() 
-      AND users.role = 'driver' 
-      AND users.assigned_airbear_id = airbears.id
-    )
-  );
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Drivers can update their assigned airbear') THEN
+    CREATE POLICY "Drivers can update their assigned airbear" ON public.airbears
+      FOR UPDATE USING (
+        EXISTS (
+          SELECT 1 FROM public.users 
+          WHERE users.id = auth.uid() 
+          AND users.role = 'driver' 
+          AND users.assigned_airbear_id = airbears.id
+        )
+      );
+  END IF;
+END $$;
 
 -- RLS Policies for Users
-CREATE POLICY "Users can view their own profile" ON public.users
-  FOR SELECT USING (auth.uid() = id);
-
-CREATE POLICY "Users can update their own profile" ON public.users
-  FOR UPDATE USING (auth.uid() = id);
-
-CREATE POLICY "Users can insert their own profile" ON public.users
-  FOR INSERT WITH CHECK (auth.uid() = id);
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Users can view their own profile') THEN
+    CREATE POLICY "Users can view their own profile" ON public.users
+      FOR SELECT USING (auth.uid() = id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Users can update their own profile') THEN
+    CREATE POLICY "Users can update their own profile" ON public.users
+      FOR UPDATE USING (auth.uid() = id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Users can insert their own profile') THEN
+    CREATE POLICY "Users can insert their own profile" ON public.users
+      FOR INSERT WITH CHECK (auth.uid() = id);
+  END IF;
+END $$;
 
 -- RLS Policies for Rides
-CREATE POLICY "Users can view their own rides" ON public.rides
-  FOR SELECT USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can create their own rides" ON public.rides
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Users can view their own rides') THEN
+    CREATE POLICY "Users can view their own rides" ON public.rides
+      FOR SELECT USING (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Users can create their own rides') THEN
+    CREATE POLICY "Users can create their own rides" ON public.rides
+      FOR INSERT WITH CHECK (auth.uid() = user_id);
+  END IF;
+END $$;
 
 -- RLS Policies for Payments
-CREATE POLICY "Users can view their own payments" ON public.payments
-  FOR SELECT USING (auth.uid() = user_id);
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Users can view their own payments') THEN
+    CREATE POLICY "Users can view their own payments" ON public.payments
+      FOR SELECT USING (auth.uid() = user_id);
+  END IF;
+END $$;
 
 -- Insert Initial Spot Data (Binghamton locations)
 INSERT INTO public.spots (id, name, latitude, longitude, description, amenities, is_active) VALUES
@@ -141,6 +168,104 @@ INSERT INTO public.spots (id, name, latitude, longitude, description, amenities,
 ('bu-science-building', 'BU Science Building', 42.090227, -75.972315, 'Science labs', ARRAY['Labs', 'Research'], true)
 ON CONFLICT (id) DO NOTHING;
 
+-- Bodega Items Table
+CREATE TABLE IF NOT EXISTS public.bodega_items (
+  id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT NOT NULL,
+  description TEXT,
+  price DECIMAL(10, 2) NOT NULL,
+  image_url TEXT,
+  category TEXT NOT NULL,
+  is_eco_friendly BOOLEAN DEFAULT false,
+  is_available BOOLEAN DEFAULT true,
+  stock INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Airbear Inventory Table
+CREATE TABLE IF NOT EXISTS public.airbear_inventory (
+  id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
+  airbear_id TEXT REFERENCES public.airbears(id),
+  item_id TEXT REFERENCES public.bodega_items(id),
+  quantity INTEGER DEFAULT 0,
+  last_restocked TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(airbear_id, item_id)
+);
+
+-- Orders Table
+CREATE TABLE IF NOT EXISTS public.orders (
+  id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES public.users(id),
+  ride_id UUID REFERENCES public.rides(id),
+  airbear_id TEXT REFERENCES public.airbears(id),
+  items JSONB NOT NULL, -- Array of {itemId, quantity, price}
+  total_amount DECIMAL(10, 2) NOT NULL,
+  status TEXT DEFAULT 'pending',
+  notes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Payments Table (Updated)
+CREATE TABLE IF NOT EXISTS public.payments (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  ride_id UUID REFERENCES public.rides(id),
+  user_id UUID REFERENCES public.users(id),
+  order_id TEXT REFERENCES public.orders(id),
+  amount DECIMAL(10, 2) NOT NULL,
+  currency TEXT DEFAULT 'usd',
+  payment_method TEXT CHECK (payment_method IN ('stripe', 'apple_pay', 'google_pay', 'cash')),
+  stripe_payment_intent_id TEXT,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'failed', 'refunded')),
+  metadata JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Advertising Packages Table
+CREATE TABLE IF NOT EXISTS public.advertising_packages (
+  id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT NOT NULL,
+  description TEXT,
+  price DECIMAL(10, 2) NOT NULL,
+  features TEXT[],
+  includes_led_banner BOOLEAN DEFAULT false,
+  includes_screen_ads BOOLEAN DEFAULT false,
+  includes_website_ads BOOLEAN DEFAULT true,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Update RLS for new tables
+ALTER TABLE public.bodega_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.advertising_packages ENABLE ROW LEVEL SECURITY;
+
+-- RLS for new tables
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Anyone can read bodega items') THEN
+    CREATE POLICY "Anyone can read bodega items" ON public.bodega_items FOR SELECT USING (true);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Users can view their own orders') THEN
+    CREATE POLICY "Users can view their own orders" ON public.orders FOR SELECT USING (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Users can create their own orders') THEN
+    CREATE POLICY "Users can create their own orders" ON public.orders FOR INSERT WITH CHECK (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Users can view their own payments') THEN
+    CREATE POLICY "Users can view their own payments" ON public.payments FOR SELECT USING (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Anyone can read advertising packages') THEN
+    CREATE POLICY "Anyone can read advertising packages" ON public.advertising_packages FOR SELECT USING (true);
+  END IF;
+END $$;
+
+-- Insert initial bodega items
+INSERT INTO public.bodega_items (id, name, description, price, category, is_eco_friendly, stock) VALUES
+('ceo-tshirt-m', 'CEO-Signed AirBear T-Shirt (M)', 'Official signed premium t-shirt', 100.00, 'apparel', true, 25),
+('local-coffee', 'Local Coffee Blend', 'Binghamton roasted organic coffee', 12.99, 'beverages', true, 50),
+('eco-water-bottle', 'Eco Water Bottle', 'Sustainable bamboo-capped bottle', 18.99, 'accessories', true, 40)
+ON CONFLICT (id) DO NOTHING;
+
 -- Insert Initial Airbear Data (Currently 1 vehicle in operation)
 INSERT INTO public.airbears (id, current_spot_id, latitude, longitude, battery_level, is_available, is_charging, heading) VALUES
 ('airbear-001', 'court-street-downtown', 42.099118, -75.917538, 95, true, false, 0)
@@ -156,9 +281,11 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create triggers for updated_at
+DROP TRIGGER IF EXISTS update_users_updated_at ON public.users;
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON public.users
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_airbears_updated_at ON public.airbears;
 CREATE TRIGGER update_airbears_updated_at BEFORE UPDATE ON public.airbears
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 

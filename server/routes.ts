@@ -25,28 +25,54 @@ if (!supabaseAdmin) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Health check
+  app.get("/api/health", (_req, res) => {
+    res.json({
+      status: "ok",
+      timestamp: new Date().toISOString(),
+      env: process.env.NODE_ENV,
+      version: "1.2.1"
+    });
+  });
+
   // Auth routes
   const profileSchema = z.object({
-    email: z.string().email(),
-    username: z.string().min(2),
+    id: z.string().optional(),
+    email: z.string().optional().nullable(), // Loosen for sync resilience
+    username: z.string().min(1),
     fullName: z.string().optional().nullable(),
     role: z.enum(["user", "driver", "admin"]).optional(),
-    avatarUrl: z.string().url().optional().nullable(),
+    avatarUrl: z.string().optional().nullable(),
   });
 
   const ensureUserProfile = async (payload: z.infer<typeof profileSchema>) => {
-    const existingUser = await storage.getUserByEmail(payload.email);
+    // Try lookup by ID first, then email
+    const existingUser = payload.id
+      ? await storage.getUser(payload.id)
+      : payload.email ? await storage.getUserByEmail(payload.email) : null;
+
     if (existingUser) {
-      return storage.updateUser(existingUser.id, {
-        username: payload.username,
-        fullName: payload.fullName ?? null,
-        avatarUrl: payload.avatarUrl ?? null,
-        role: payload.role || existingUser.role,
-      });
+      // Deep comparison to avoid redundant updates
+      const needsUpdate =
+        existingUser.username !== payload.username ||
+        (payload.fullName !== undefined && existingUser.fullName !== payload.fullName) ||
+        (payload.avatarUrl !== undefined && existingUser.avatarUrl !== payload.avatarUrl) ||
+        (payload.role !== undefined && existingUser.role !== payload.role);
+
+      if (needsUpdate) {
+        return storage.updateUser(existingUser.id, {
+          username: payload.username,
+          fullName: payload.fullName ?? existingUser.fullName,
+          avatarUrl: payload.avatarUrl ?? existingUser.avatarUrl,
+          role: payload.role || existingUser.role,
+        });
+      }
+      return existingUser;
     }
 
     return storage.createUser({
-      email: payload.email,
+      id: payload.id, // Pass the ID from Supabase Auth
+      email: payload.email || "",
       username: payload.username,
       fullName: payload.fullName ?? null,
       avatarUrl: payload.avatarUrl ?? null,
@@ -65,7 +91,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const userData = profileSchema.extend({ password: z.string().min(6) }).parse(req.body);
       const { data, error } = await supabaseAdmin.auth.admin.createUser({
-        email: userData.email,
+        email: userData.email || undefined,
         password: userData.password,
         email_confirm: true,
         user_metadata: {
@@ -239,7 +265,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Stripe payment routes
   app.post("/api/create-payment-intent", async (req, res) => {
     try {
-      const { amount, orderId, rideId, paymentMethod = "stripe" } = req.body;
+      const { amount, orderId, rideId, userId, paymentMethod = "stripe" } = req.body;
 
       if (!amount || amount <= 0) {
         return res.status(400).json({ message: "Invalid amount" });
@@ -252,6 +278,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const qrData = {
           orderId,
           rideId,
+          userId,
           amount,
           timestamp: Date.now(),
           method: "cash"
@@ -272,6 +299,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           metadata: {
             orderId: orderId || "",
             rideId: rideId || "",
+            userId: userId || "",
           }
         });
 
@@ -293,6 +321,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(payment);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/payments/confirm-cash", async (req, res) => {
+    try {
+      const { qrCode, driverId } = req.body;
+      if (!qrCode) return res.status(400).json({ message: "Missing QR code data" });
+
+      const decodedData = JSON.parse(Buffer.from(qrCode, 'base64').toString());
+      const { orderId, rideId, amount } = decodedData;
+
+      if (orderId) {
+        await storage.updateOrder(orderId, { status: "completed" });
+      }
+      if (rideId) {
+        await storage.updateRide(rideId, { status: "completed" });
+      }
+
+      // Record the cash payment
+      const payment = await storage.createPayment({
+        rideId: rideId || null,
+        userId: decodedData.userId || null,
+        amount: amount.toString(),
+        currency: "usd",
+        paymentMethod: "cash",
+        status: "completed",
+        metadata: { driverId, confirmedAt: new Date().toISOString() }
+      });
+
+      res.json({ success: true, payment });
+    } catch (error: any) {
+      res.status(400).json({ message: "Invalid QR code or confirmation error: " + error.message });
     }
   });
 
@@ -374,8 +434,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let event;
       try {
-        event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+        event = stripe.webhooks.constructEvent((req as any).rawBody, sig, endpointSecret);
       } catch (err: any) {
+        console.error(`Webhook signature verification failed: ${err.message}`);
         return res.status(400).json({ message: `Webhook signature verification failed: ${err.message}` });
       }
 

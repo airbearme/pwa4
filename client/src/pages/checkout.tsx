@@ -131,26 +131,17 @@ export default function Checkout() {
 
   const createPaymentIntentMutation = useMutation({
     mutationFn: async (data: any) => {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-      if (!supabaseUrl || !supabaseAnonKey) {
-        throw new Error("Supabase credentials missing");
-      }
-
-      const response = await fetch(`${supabaseUrl}/functions/v1/create-payment-intent`, {
+      const response = await fetch('/api/create-payment-intent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseAnonKey}`,
-          'apikey': supabaseAnonKey,
         },
         body: JSON.stringify(data),
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || errorData.message || 'Failed to create payment intent');
+        throw new Error(errorData.message || 'Failed to create payment intent');
       }
 
       return response.json();
@@ -191,6 +182,7 @@ export default function Checkout() {
         amount: orderData.total,
         orderId: orderData.orderId,
         rideId: orderData.rideId,
+        userId: user?.id,
         paymentMethod,
       });
     }

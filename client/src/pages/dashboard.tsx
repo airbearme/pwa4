@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "wouter";
+import { useState, useEffect } from "react";
+import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
@@ -112,6 +112,14 @@ export default function Dashboard() {
   });
 
   const liveFleet = useAirbearLocationUpdates();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (user === null) {
+      // Only redirect if we know there's no user (not just loading)
+      setLocation('/auth');
+    }
+  }, [user, setLocation]);
 
   if (!user) {
     return (

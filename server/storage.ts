@@ -75,6 +75,134 @@ class MemStorage implements IStorage {
       { name: 'Confluence Park', latitude: '42.090123', longitude: '-75.912345' },
     ];
     spotsData.forEach(spot => this.createSpot(spot));
+
+    // Pre-seed bodega items with proper images
+    const bodegaItems: InsertBodegaItem[] = [
+      {
+        name: 'Cold Brew Coffee',
+        description: 'Smooth, cold-brewed coffee served over ice with a hint of vanilla',
+        price: '4.50',
+        imageUrl: 'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=400&h=400&fit=crop',
+        category: 'beverages',
+        isEcoFriendly: true,
+        stock: 25
+      },
+      {
+        name: 'Green Smoothie Bowl',
+        description: 'Organic spinach, banana, almond milk, topped with granola and berries',
+        price: '8.75',
+        imageUrl: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400&h=400&fit=crop',
+        category: 'food',
+        isEcoFriendly: true,
+        stock: 15
+      },
+      {
+        name: 'Avocado Toast',
+        description: 'Sourdough bread with smashed avocado, cherry tomatoes, and microgreens',
+        price: '7.25',
+        imageUrl: 'https://images.unsplash.com/photo-1541519227354-08fa5d50c44d?w=400&h=400&fit=crop',
+        category: 'food',
+        isEcoFriendly: true,
+        stock: 20
+      },
+      {
+        name: 'Sparkling Water',
+        description: 'Naturally carbonated spring water in recyclable glass bottles',
+        price: '2.50',
+        imageUrl: 'https://images.unsplash.com/photo-1559839914-17aae19cec71?w=400&h=400&fit=crop',
+        category: 'beverages',
+        isEcoFriendly: true,
+        stock: 30
+      },
+      {
+        name: 'Dark Chocolate Bar',
+        description: '70% cocoa organic dark chocolate with sea salt',
+        price: '3.75',
+        imageUrl: 'https://images.unsplash.com/photo-1606312619070-d48b4c652a52?w=400&h=400&fit=crop',
+        category: 'snacks',
+        isEcoFriendly: true,
+        stock: 40
+      },
+      {
+        name: 'Trail Mix',
+        description: 'Mixed nuts, dried cranberries, and dark chocolate chips',
+        price: '5.25',
+        imageUrl: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=400&fit=crop',
+        category: 'snacks',
+        isEcoFriendly: true,
+        stock: 35
+      },
+      {
+        name: 'Herbal Tea',
+        description: 'Caffeine-free chamomile tea in compostable packaging',
+        price: '3.25',
+        imageUrl: 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=400&h=400&fit=crop',
+        category: 'beverages',
+        isEcoFriendly: true,
+        stock: 22
+      },
+      {
+        name: 'Veggie Wrap',
+        description: 'Whole wheat wrap with hummus, cucumber, bell peppers, and sprouts',
+        price: '6.50',
+        imageUrl: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=400&h=400&fit=crop',
+        category: 'food',
+        isEcoFriendly: true,
+        stock: 18
+      },
+      {
+        name: 'Protein Bar',
+        description: 'Plant-based protein bar with almonds and dates',
+        price: '4.00',
+        imageUrl: 'https://images.unsplash.com/photo-1621939514649-280e2ee25f60?w=400&h=400&fit=crop',
+        category: 'snacks',
+        isEcoFriendly: true,
+        stock: 28
+      },
+      {
+        name: 'Matcha Latte',
+        description: 'Ceremonial grade matcha with oat milk and honey',
+        price: '5.75',
+        imageUrl: 'https://images.unsplash.com/photo-1536256263959-770b48d82b0a?w=400&h=400&fit=crop',
+        category: 'beverages',
+        isEcoFriendly: true,
+        stock: 16
+      },
+      {
+        name: 'Reusable Water Bottle',
+        description: 'Stainless steel insulated water bottle - perfect for eco-conscious riders',
+        price: '24.99',
+        imageUrl: 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=400&h=400&fit=crop',
+        category: 'accessories',
+        isEcoFriendly: true,
+        stock: 12
+      },
+      {
+        name: 'Bamboo Toothbrush',
+        description: 'Biodegradable bamboo toothbrush with charcoal bristles',
+        price: '4.99',
+        imageUrl: 'https://images.unsplash.com/photo-1559599101-f09722fb4948?w=400&h=400&fit=crop',
+        category: 'accessories',
+        isEcoFriendly: true,
+        stock: 25
+      }
+    ];
+    bodegaItems.forEach(item => this.createBodegaItem(item));
+
+    // Pre-seed an airbear for testing
+    const firstSpot = Array.from(this.spots.values())[0];
+    if (firstSpot) {
+      this.createAirbear({
+        driverId: null,
+        currentSpotId: firstSpot.id,
+        latitude: '42.099118',
+        longitude: '-75.917538',
+        batteryLevel: 85,
+        isAvailable: true,
+        isCharging: false,
+        maintenanceStatus: 'good'
+      });
+    }
   }
 
   // Users
@@ -89,7 +217,7 @@ class MemStorage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     const user: User = {
       ...insertUser,
-      id: randomUUID(),
+      id: insertUser.id || randomUUID(),
       fullName: insertUser.fullName || null,
       avatarUrl: insertUser.avatarUrl || null,
       role: insertUser.role || "user",
@@ -513,10 +641,6 @@ const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 export const storage: IStorage = supabaseUrl && supabaseServiceRoleKey
   ? (() => {
     const client = createClient(supabaseUrl, supabaseServiceRoleKey);
-    console.log("✅ Supabase storage enabled");
     return new SupabaseStorage(client);
   })()
-  : (() => {
-    console.warn("⚠️ Using in-memory storage. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY for persistence.");
-    return new MemStorage();
-  })();
+  : new MemStorage();

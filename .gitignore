@@ -124,3 +124,7 @@ secrets/playwright-report/
 \n# Test results\ntest-results/
 .vercel
 .env*.local
+
+# AirBear specific
+GUIUX12.21.25-workspace.code-workspace
+SAVE

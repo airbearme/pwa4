@@ -35,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const syncProfile = useCallback(async (supabaseUser: SupabaseUser) => {
     const profilePayload = {
+      id: supabaseUser.id,
       email: supabaseUser.email || "",
       username: (supabaseUser.user_metadata?.username as string) || supabaseUser.email?.split("@")[0] || "airbear",
       fullName: (supabaseUser.user_metadata?.fullName as string | undefined) || null,

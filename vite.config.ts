@@ -12,6 +12,9 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.js',
       registerType: 'autoUpdate',
       injectRegister: 'inline',
       workbox: {
@@ -21,17 +24,19 @@ export default defineConfig({
         skipWaiting: true
       },
       devOptions: {
-        enabled: true
+        enabled: true,
+        type: 'module'
       },
       includeAssets: ['airbear-mascot.png', 'c4v-logo.svg'],
       manifestFilename: 'manifest.json',
       manifest: {
-        name: 'AirBear',
+        name: 'AirBear - Solar Rickshaw Ride Share',
         short_name: 'AirBear',
-        description: 'Solar-Powered Eco-Ride Platform',
-        theme_color: '#ffffff',
+        description: 'Eco-friendly solar-powered rides in Binghamton, NY with onboard bodegas',
+        theme_color: '#10b981',
+        background_color: '#000000',
         display: 'standalone',
-        orientation: 'portrait',
+        orientation: 'portrait-primary',
         scope: '/',
         start_url: '/',
         icons: [
@@ -46,6 +51,20 @@ export default defineConfig({
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable'
+          }
+        ],
+        shortcuts: [
+          {
+            name: "Book a Ride",
+            short_name: "Book Ride",
+            description: "Quickly book an AirBear ride",
+            url: "/map"
+          },
+          {
+            name: "Driver Dashboard",
+            short_name: "Driver",
+            description: "Access driver dashboard",
+            url: "/driver-dashboard"
           }
         ]
       }

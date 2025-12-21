@@ -139,7 +139,6 @@ export function useAirbearLocationUpdates() {
                     table: 'airbears',
                 },
                 (payload) => {
-                    console.log('Real-time update received:', payload.new);
                     setAirbears((prev) =>
                         prev.map((bear) =>
                             bear.id === payload.new.id ? { ...bear, ...payload.new } : bear
@@ -147,9 +146,7 @@ export function useAirbearLocationUpdates() {
                     );
                 }
             )
-            .subscribe((status) => {
-                console.log('Supabase Realtime status:', status);
-            });
+            .subscribe();
 
         // 2. Poll as fallback (every 10 seconds, less aggressive than before since we have Realtime)
         const interval = setInterval(fetchAirbears, 10000);

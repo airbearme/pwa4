@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ThemeProvider } from "next-themes";
+import { Suspense } from "react";
 
 // Pages
 import Home from "@/pages/home";
@@ -27,6 +28,8 @@ import NotFound from "@/pages/not-found";
 import Header from "@/components/header";
 import Footer from "@/components/footer";
 import ParticleSystem from "@/components/particle-system";
+import ErrorBoundary from "@/components/error-boundary";
+import AirbearWheel from "@/components/airbear-wheel";
 
 function Router() {
   return (
@@ -35,23 +38,31 @@ function Router() {
       <Header />
 
       <main className="flex-1 relative z-10">
-        <Switch>
-          <Route path="/" component={Home} />
-          <Route path="/auth" component={Auth} />
-          <Route path="/dashboard" component={Dashboard} />
-          <Route path="/map" component={Map} />
-          <Route path="/bodega" component={Bodega} />
-          <Route path="/checkout" component={Checkout} />
-          <Route path="/challenges" component={Challenges} />
-          <Route path="/rewards" component={Rewards} />
-          <Route path="/driver-dashboard" component={DriverDashboard} />
-          <Route path="/promo" component={Promo} />
-          <Route path="/support" component={Support} />
-          <Route path="/safety" component={Safety} />
-          <Route path="/privacy" component={Privacy} />
-          <Route path="/terms" component={Terms} />
-          <Route component={NotFound} />
-        </Switch>
+        <ErrorBoundary>
+          <Suspense fallback={
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <AirbearWheel size="lg" animated className="text-primary opacity-50" />
+            </div>
+          }>
+            <Switch>
+              <Route path="/" component={Home} />
+              <Route path="/auth" component={Auth} />
+              <Route path="/dashboard" component={Dashboard} />
+              <Route path="/map" component={Map} />
+              <Route path="/bodega" component={Bodega} />
+              <Route path="/checkout" component={Checkout} />
+              <Route path="/challenges" component={Challenges} />
+              <Route path="/rewards" component={Rewards} />
+              <Route path="/driver-dashboard" component={DriverDashboard} />
+              <Route path="/promo" component={Promo} />
+              <Route path="/support" component={Support} />
+              <Route path="/safety" component={Safety} />
+              <Route path="/privacy" component={Privacy} />
+              <Route path="/terms" component={Terms} />
+              <Route component={NotFound} />
+            </Switch>
+          </Suspense>
+        </ErrorBoundary>
       </main>
 
       <Footer />
