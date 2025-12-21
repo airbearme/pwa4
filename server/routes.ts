@@ -1,8 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import Stripe from "stripe";
-import { storage } from "./storage";
-import { insertRideSchema, insertOrderSchema, insertPaymentSchema } from "@shared/schema";
+import { storage } from "./storage.js";
+import { insertRideSchema, insertOrderSchema, insertPaymentSchema } from "../shared/schema.js";
 import { z } from "zod";
 import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js";
 

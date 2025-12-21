@@ -8,7 +8,7 @@ import {
   BodegaItem, InsertBodegaItem,
   Order, InsertOrder,
   Payment, InsertPayment,
-} from "@shared/schema";
+} from "../shared/schema.js";
 
 interface IStorage {
   // Users
