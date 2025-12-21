@@ -5,53 +5,29 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Middleware for logging (similar to server/index.ts)
-app.use((req, res, next) => {
-    const start = Date.now();
-    const path = req.path;
-    let capturedJsonResponse: Record<string, any> | undefined = undefined;
+// Initialize routes inside the handler to handle the async nature correctly in Vercel
+let initialized = false;
 
-    const originalResJson = res.json;
-    res.json = function (bodyJson, ...args) {
-        capturedJsonResponse = bodyJson;
-        return originalResJson.apply(res, [bodyJson, ...args]);
-    };
+app.use(async (req, res, next) => {
+    if (!initialized) {
+        try {
+            await registerRoutes(app);
+            initialized = true;
 
-    res.on("finish", () => {
-        const duration = Date.now() - start;
-        if (path.startsWith("/api")) {
-            let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-            if (capturedJsonResponse) {
-                logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-            }
-            if (logLine.length > 80) {
-                logLine = logLine.slice(0, 79) + "…";
-            }
-            console.log(logLine);
+            // Error handling (attach after routes)
+            app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+                const status = err.status || err.statusCode || 500;
+                const message = err.message || "Internal Server Error";
+                console.error("API Error:", err);
+                res.status(status).json({ message });
+            });
+
+        } catch (error) {
+            console.error("Initialization Error:", error);
+            return res.status(500).json({ message: "Failed to initialize API" });
         }
-    });
-
+    }
     next();
 });
 
-// Initialize routes
-let initialized = false;
-const initPromise = (async () => {
-    await registerRoutes(app);
-
-    // Error handling
-    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-        const status = err.status || err.statusCode || 500;
-        const message = err.message || "Internal Server Error";
-        res.status(status).json({ message });
-    });
-})();
-
-// Vercel serverless function entry point
-export default async (req: Request, res: Response) => {
-    if (!initialized) {
-        await initPromise;
-        initialized = true;
-    }
-    return app(req, res);
-};
+export default app;
