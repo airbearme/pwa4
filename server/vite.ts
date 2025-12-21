@@ -21,7 +21,7 @@ export function log(message: string, source = "express") {
 
 export async function setupVite(app: Express, server: Server) {
   console.log("Setting up Vite...");
-  
+
   const vite = await createViteServer({
     server: { middlewareMode: true },
     appType: 'spa', // Let Vite handle SPA fallbacks
@@ -36,7 +36,7 @@ export async function setupVite(app: Express, server: Server) {
   server.on('upgrade', (req, socket, head) => {
     // Ensure the request is meant for the Vite WS server
     if (req.headers['upgrade'] === 'websocket') {
-      vite.ws.handleUpgrade(req, socket, head);
+      (vite.ws as any).handleUpgrade(req, socket, head);
     }
   });
 

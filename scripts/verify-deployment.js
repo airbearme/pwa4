@@ -12,7 +12,7 @@ const IONOS_CONFIG = {
   username: process.env.IONOS_SFTP_USER || 'a2096159',
   password: process.env.IONOS_SFTP_PASSWORD || 'Danknugs420420',
   port: 22,
-  remoteBase: '/public' // Confirmed correct path
+  remoteBase: '/public_html' // Confirmed correct path
 };
 
 console.log('🔍 Verifying AirBear PWA deployment on IONOS...');
@@ -44,7 +44,7 @@ async function verifyDeployment() {
     const criticalFiles = [
       'index.html',
       'sw.js',
-      'manifest.webmanifest',
+      'manifest.json',
       'assets'
     ];
 

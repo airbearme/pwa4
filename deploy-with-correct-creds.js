@@ -17,12 +17,12 @@ const IONOS_CONFIG = {
 
 console.log('🚀 Deploying AirBear PWA to airbear.me with correct credentials...');
 
-const joinRemotePath = (...parts) => 
+const joinRemotePath = (...parts) =>
   parts.filter(Boolean).join('/').replace(/\\/g, '/');
 
 async function deploy() {
   const sftp = new SftpClient();
-  
+
   try {
     // 1. Verify build output exists
     const distPath = path.resolve(IONOS_CONFIG.localDist);
@@ -41,20 +41,20 @@ async function deploy() {
     });
     console.log('✅ Connected successfully to IONOS!');
 
-    // 3. Find the correct remote directory
-    let targetDir = IONOS_CONFIG.remoteBase;
-    const possibleDirs = ['/public_html', '/httpdocs', '/www', '/htdocs'];
-    
-    for (const dir of possibleDirs) {
-      try {
-        await sftp.stat(dir);
-        targetDir = dir;
-        console.log('✅ Found web directory:', targetDir);
-        break;
-      } catch (err) {
-        continue;
-      }
-    }
+    // 3. Deploy to Root / as it seems to be the active docroot
+    let targetDir = '/';
+    console.log(`🎯 Targeting ROOT directory: ${targetDir}`);
+
+    // Cleanup the folder we mistakenly created earlier
+    try {
+      await sftp.rmdir('/public_html', true);
+      console.log('🗑️  Removed experimental /public_html');
+    } catch (e) { }
+
+    // Ensure target exists
+    try {
+      await sftp.mkdir(targetDir, true);
+    } catch (e) { }
 
     // 4. Backup existing files
     console.log('📦 Creating backup of existing files...');
@@ -63,7 +63,7 @@ async function deploy() {
       if (existingFiles.length > 0) {
         const backupDir = `${targetDir}_backup_${Date.now()}`;
         await sftp.mkdir(backupDir, true);
-        
+
         for (const file of existingFiles) {
           if (file.name !== '.' && file.name !== '..') {
             const oldPath = joinRemotePath(targetDir, file.name);
@@ -81,34 +81,49 @@ async function deploy() {
       console.log('ℹ️ No existing files to backup');
     }
 
-    // 5. Clear remote directory for fresh deployment
-    console.log('🧹 Clearing remote directory...');
+    // 5. Clear remote directory (PROTECTING SYSTEM FOLDERS)
+    console.log('🧹 Clearing remote directory (Safely)...');
+    const protectedItems = [
+      '.', '..',
+      'logs', 'server', 'cgi-bin',
+      'httpdocs', 'public_html',
+      '.bash_history', '.kb', '.ssh',
+      'httpdocs_backup_', 'public_html_backup_' // prefixes
+    ];
+
     try {
       const remoteFiles = await sftp.list(targetDir);
       for (const file of remoteFiles) {
-        if (file.name !== '.' && file.name !== '..') {
-          const remotePath = joinRemotePath(targetDir, file.name);
-          try {
-            if (file.type === 'd') {
-              await sftp.rmdir(remotePath, true);
-            } else {
-              await sftp.delete(remotePath);
-            }
-          } catch (err) {
-            console.log('⚠️ Could not delete:', file.name);
+        // Skip protected items and backups
+        if (protectedItems.includes(file.name) ||
+          file.name.startsWith('httpdocs_backup') ||
+          file.name.startsWith('public_html_backup')) {
+          console.log(`🛡️  Skipping protected item: ${file.name}`);
+          continue;
+        }
+
+        const remotePath = joinRemotePath(targetDir, file.name);
+        try {
+          if (file.type === 'd') {
+            await sftp.rmdir(remotePath, true);
+          } else {
+            await sftp.delete(remotePath);
           }
+          console.log(`🗑️  Deleted: ${file.name}`);
+        } catch (err) {
+          console.log('⚠️ Could not delete:', file.name);
         }
       }
     } catch (err) {
-      console.log('ℹ️ Remote directory already clean');
+      console.log('ℹ️ Remote directory already clean or error listing');
     }
 
     // 6. Upload new files
     console.log('📤 Uploading AirBear PWA with orange & green UI...');
-    
+
     async function uploadDir(localPath, remotePath) {
       const files = fs.readdirSync(localPath);
-      
+
       for (const file of files) {
         const localFilePath = path.join(localPath, file);
         const remoteFilePath = joinRemotePath(remotePath, file);
@@ -119,6 +134,10 @@ async function deploy() {
           await uploadDir(localFilePath, remoteFilePath);
         } else {
           await sftp.fastPut(localFilePath, remoteFilePath);
+          // Set permissions to 644 for files (standard for web servers)
+          try {
+            await sftp.chmod(remoteFilePath, 0o644);
+          } catch (e) { console.log('Chmod failed for file', file); }
           console.log(`✅ ${file} (${(stats.size / 1024).toFixed(2)} KB)`);
         }
       }
@@ -126,14 +145,17 @@ async function deploy() {
 
     await uploadDir(distPath, targetDir);
 
+    // Also chmod the root directory itself to 755 just in case
+    // await sftp.chmod(targetDir, 0o755);
+
     // 7. Verification
     console.log('\n🔍 Final verification...');
     const indexExists = await sftp.exists(joinRemotePath(targetDir, 'index.html'));
     const manifestExists = await sftp.exists(joinRemotePath(targetDir, 'manifest.json'));
-    
+
     console.log(`✅ index.html: ${indexExists ? 'DEPLOYED' : 'MISSING'}`);
     console.log(`✅ manifest.json: ${manifestExists ? 'DEPLOYED' : 'MISSING'}`);
-    
+
     if (indexExists && manifestExists) {
       console.log('\n🎉 DEPLOYMENT SUCCESSFUL!');
       console.log('🌐 Your AirBear PWA is now live at: https://airbear.me');

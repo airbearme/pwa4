@@ -70,9 +70,9 @@ class MemStorage implements IStorage {
   constructor() {
     // Pre-seed with some data for development
     const spotsData: InsertSpot[] = [
-        { name: 'Court Street Downtown', latitude: '42.099118', longitude: '-75.917538' },
-        { name: 'Riverwalk BU Center', latitude: '42.098765', longitude: '-75.916543' },
-        { name: 'Confluence Park', latitude: '42.090123', longitude: '-75.912345' },
+      { name: 'Court Street Downtown', latitude: '42.099118', longitude: '-75.917538' },
+      { name: 'Riverwalk BU Center', latitude: '42.098765', longitude: '-75.916543' },
+      { name: 'Confluence Park', latitude: '42.090123', longitude: '-75.912345' },
     ];
     spotsData.forEach(spot => this.createSpot(spot));
   }
@@ -97,6 +97,8 @@ class MemStorage implements IStorage {
       totalRides: insertUser.totalRides || 0,
       co2Saved: insertUser.co2Saved || "0",
       hasCeoTshirt: insertUser.hasCeoTshirt || false,
+      stripeCustomerId: insertUser.stripeCustomerId ?? null,
+      stripeSubscriptionId: insertUser.stripeSubscriptionId ?? null,
       tshirtPurchaseDate: insertUser.tshirtPurchaseDate || null,
       createdAt: new Date(),
       updatedAt: new Date()
@@ -132,8 +134,6 @@ class MemStorage implements IStorage {
     const spot: Spot = {
       ...insertSpot,
       id: randomUUID(),
-      description: insertSpot.description || null,
-      amenities: insertSpot.amenities || [],
       isActive: insertSpot.isActive ?? true,
       createdAt: new Date()
     };
@@ -164,12 +164,16 @@ class MemStorage implements IStorage {
       id: randomUUID(),
       driverId: insertAirbear.driverId || null,
       currentSpotId: insertAirbear.currentSpotId || null,
+      latitude: insertAirbear.latitude ?? null,
+      longitude: insertAirbear.longitude ?? null,
+      heading: insertAirbear.heading ?? null,
       batteryLevel: insertAirbear.batteryLevel || 100,
       isAvailable: insertAirbear.isAvailable ?? true,
       isCharging: insertAirbear.isCharging || false,
       maintenanceStatus: insertAirbear.maintenanceStatus || "good",
-      lastMaintenance: insertAirbear.lastMaintenance || null,
-      createdAt: new Date()
+      totalDistance: "0",
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
     this.airbears.set(airbear.id, airbear);
     return airbear;
@@ -324,7 +328,7 @@ class MemStorage implements IStorage {
 }
 
 class SupabaseStorage implements IStorage {
-  constructor(private supabase: SupabaseClient) {}
+  constructor(private supabase: SupabaseClient) { }
 
   private assert<T>(data: T | null, error: any): T {
     if (error) {
@@ -508,11 +512,11 @@ const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 export const storage: IStorage = supabaseUrl && supabaseServiceRoleKey
   ? (() => {
-      const client = createClient(supabaseUrl, supabaseServiceRoleKey);
-      console.log("✅ Supabase storage enabled");
-      return new SupabaseStorage(client);
-    })()
+    const client = createClient(supabaseUrl, supabaseServiceRoleKey);
+    console.log("✅ Supabase storage enabled");
+    return new SupabaseStorage(client);
+  })()
   : (() => {
-      console.warn("⚠️ Using in-memory storage. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY for persistence.");
-      return new MemStorage();
-    })();
+    console.warn("⚠️ Using in-memory storage. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY for persistence.");
+    return new MemStorage();
+  })();

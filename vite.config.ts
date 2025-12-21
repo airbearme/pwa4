@@ -52,10 +52,10 @@ export default defineConfig({
     })
   ],
   define: {
-    'import.meta.env.VITE_STRIPE_PUBLIC_KEY': JSON.stringify(process.env.VITE_STRIPE_PUBLIC_KEY),
-    'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(process.env.VITE_SUPABASE_URL),
-    'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(process.env.VITE_SUPABASE_ANON_KEY),
-    'import.meta.env.VITE_USE_MOCK_API': JSON.stringify('false'),
+    'import.meta.env.VITE_STRIPE_PUBLIC_KEY': JSON.stringify(process.env.VITE_STRIPE_PUBLIC_KEY || 'pk_test_mock_stripe_key'),
+    'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(process.env.VITE_SUPABASE_URL || 'https://mock.supabase.co'),
+    'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(process.env.VITE_SUPABASE_ANON_KEY || 'mock_anon_key'),
+    'import.meta.env.VITE_USE_MOCK_API': JSON.stringify('true'),
     '__APP_VERSION__': JSON.stringify(Date.now().toString()),
   },
   resolve: {

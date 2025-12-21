@@ -122,3 +122,5 @@ Thumbs.db
 secrets/playwright-report/
 \n# Test reports\nplaywright-report/
 \n# Test results\ntest-results/
+.vercel
+.env*.local

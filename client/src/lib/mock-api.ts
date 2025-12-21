@@ -113,38 +113,51 @@ if (typeof window !== 'undefined') {
 }
 
 // Mock API Interface
+const mockRes = (data: any): Response => ({
+  ok: true,
+  status: 200,
+  statusText: "OK",
+  json: async () => data,
+  text: async () => JSON.stringify(data),
+  headers: new Headers(),
+  clone: () => mockRes(data),
+  body: null,
+  bodyUsed: false,
+  arrayBuffer: async () => new ArrayBuffer(0),
+  blob: async () => new Blob(),
+  formData: async () => new FormData(),
+} as Response);
+
 export const mockApi = {
   get: async (url: string) => {
     // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, 300));
 
     if (url === '/api/spots') {
-      return { json: async () => spots };
+      return mockRes(spots);
     }
 
     if (url === '/api/rickshaws') {
-      return { json: async () => state.rickshaws };
+      return mockRes(state.rickshaws);
     }
 
     if (url === '/api/user') {
-      return { json: async () => state.user };
+      return mockRes(state.user);
     }
 
     if (url === '/api/analytics/overview') {
       const active = state.rickshaws.filter(r => r.isAvailable).length;
-      return {
-        json: async () => ({
-          totalSpots: spots.length,
-          totalAirbears: state.rickshaws.length,
-          activeAirbears: active,
-          chargingAirbears: state.rickshaws.filter(r => r.isCharging).length,
-          maintenanceAirbears: 0,
-          averageBatteryLevel: Math.round(state.rickshaws.reduce((acc, r) => acc + r.batteryLevel, 0) / state.rickshaws.length)
-        }),
-      };
+      return mockRes({
+        totalSpots: spots.length,
+        totalAirbears: state.rickshaws.length,
+        activeAirbears: active,
+        chargingAirbears: state.rickshaws.filter(r => r.isCharging).length,
+        maintenanceAirbears: 0,
+        averageBatteryLevel: Math.round(state.rickshaws.reduce((acc, r) => acc + r.batteryLevel, 0) / state.rickshaws.length)
+      });
     }
 
-    return { json: async () => ({}) };
+    return mockRes({});
   },
 
   post: async (url: string, data: any) => {
@@ -152,9 +165,9 @@ export const mockApi = {
 
     if (url === '/api/create-payment-intent') {
       if (data.paymentMethod === 'cash') {
-        return { json: async () => ({ qrCode: `airbear-cash-${Date.now()}` }) };
+        return mockRes({ qrCode: `airbear-cash-${Date.now()}` });
       }
-      return { json: async () => ({ clientSecret: `mock_pi_${Date.now()}_secret_${Math.random().toString(36).substr(2)}` }) };
+      return mockRes({ clientSecret: `mock_pi_${Date.now()}_secret_${Math.random().toString(36).substr(2)}` });
     }
 
     if (url === '/api/rides') {
@@ -163,15 +176,15 @@ export const mockApi = {
       state.user.totalRides += 1;
       state.user.ecoPoints += 20; // Reward points
       saveState();
-      return { json: async () => newRide };
+      return mockRes(newRide);
     }
 
     if (url === '/api/auth/sync-profile') {
       state.user = { ...state.user, ...data };
       saveState();
-      return { json: async () => ({ user: state.user }) };
+      return mockRes({ user: state.user });
     }
 
-    return { json: async () => ({ success: true }) };
+    return mockRes({ success: true });
   }
 };
