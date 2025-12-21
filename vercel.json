@@ -1,12 +1,11 @@
 {
     "buildCommand": "npm run vercel-build",
-    "outputDirectory": "dist",
-    "functions": {
-        "functions/api/**/*.ts": {
-            "runtime": "@vercel/node"
-        }
-    },
+    "outputDirectory": "dist/public",
     "rewrites": [
+        {
+            "source": "/api/(.*)",
+            "destination": "/api"
+        },
         {
             "source": "/((?!api/).*)",
             "destination": "/index.html"
