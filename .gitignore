@@ -38,7 +38,7 @@ jspm_packages/
 # TypeScript cache
 *.tsbuildinfo
 
-# Optional npm cache directory
+# Optional npm cache
 .npm
 
 # Optional eslint cache
@@ -119,9 +119,12 @@ Thumbs.db
 *.sqlite
 
 # Secrets
-secrets/playwright-report/
-\n# Test reports\nplaywright-report/
-\n# Test results\ntest-results/
+secrets/
+
+# Test artifacts
+playwright-report/
+test-results/
+
 .vercel
 .env*.local
 
