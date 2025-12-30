@@ -33,6 +33,7 @@ test.describe('AirBear Critical User Flows', () => {
     });
 
     test('CEO T-Shirt Promo Interaction', async ({ page }) => {
+        await page.waitForLoadState('networkidle');
         const promoBtn = page.getByTestId('button-ceo-tshirt');
         await expect(promoBtn).toBeVisible();
 

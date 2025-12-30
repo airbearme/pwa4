@@ -121,8 +121,8 @@ export default function Home() {
           <motion.h1
             className="text-4xl sm:text-6xl lg:text-7xl font-bold mb-6 relative"
             initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
+            animate={{ opacity: 1, y: 0, scale: [1, 1.02, 1] }}
+            transition={{ duration: 0.8, delay: 0.2, scale: { duration: 2, repeat: Infinity, ease: "easeInOut" } }}
           >
             <span className="bg-gradient-to-r from-emerald-600 via-lime-500 to-amber-500 bg-clip-text text-transparent animate-pulse-glow airbear-holographic text-outline-strong">
               AirBear Mobile Bodega
@@ -270,6 +270,7 @@ export default function Home() {
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.1 }}
               viewport={{ once: true }}
+              whileHover={{ scale: 1.05, boxShadow: '0px 10px 30px -5px rgba(16, 185, 129, 0.3)' }}
             >
               <Card className="glass-morphism hover-lift h-full" data-testid="card-eco-friendly">
                 <CardContent className="p-6">
@@ -291,6 +292,7 @@ export default function Home() {
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
               viewport={{ once: true }}
+              whileHover={{ scale: 1.05, boxShadow: '0px 10px 30px -5px rgba(245, 158, 11, 0.3)' }}
             >
               <Card className="glass-morphism hover-lift h-full" data-testid="card-mobile-bodega">
                 <CardContent className="p-6">
@@ -312,6 +314,7 @@ export default function Home() {
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.3 }}
               viewport={{ once: true }}
+              whileHover={{ scale: 1.05, boxShadow: '0px 10px 30px -5px rgba(34, 197, 94, 0.3)' }}
             >
               <Card className="glass-morphism hover-lift h-full" data-testid="card-smart-routing">
                 <CardContent className="p-6">
