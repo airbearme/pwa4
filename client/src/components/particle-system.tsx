@@ -72,6 +72,29 @@ export default function ParticleSystem() {
           }}
         />
       ))}
+
+      {/* Sparkle particles */}
+      {Array.from({ length: 15 }, (_, i) => (
+        <motion.div
+          key={`sparkle-${i}`}
+          className="absolute w-1.5 h-1.5 bg-white rounded-full"
+          style={{
+            left: `${Math.random() * 100}%`,
+            top: `${Math.random() * 100}%`,
+            boxShadow: '0 0 8px 2px rgba(255, 255, 255, 0.7)',
+          }}
+          animate={{
+            opacity: [0, 1, 0],
+            scale: [0.5, 1.5, 0.5],
+          }}
+          transition={{
+            duration: 2.5,
+            repeat: Infinity,
+            delay: i * 0.3,
+            ease: "circIn",
+          }}
+        />
+      ))}
     </div>
   );
 }
