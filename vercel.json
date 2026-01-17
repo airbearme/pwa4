@@ -3,6 +3,10 @@
     "outputDirectory": "dist/public",
     "rewrites": [
         {
+            "source": "/api/(.*)",
+            "destination": "/api/[...path].ts"
+        },
+        {
             "source": "/((?!api/).*)",
             "destination": "/index.html"
         }
