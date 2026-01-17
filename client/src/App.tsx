@@ -65,6 +65,19 @@ function Router() {
         </ErrorBoundary>
       </main>
 
+      {/* Global AirBear mascot - visible on every page */}
+      <div className="fixed bottom-4 right-4 z-50 pointer-events-none">
+        <img
+          src="/airbear-mascot.png"
+          alt="AirBear mascot"
+          className="w-16 h-16 opacity-80 hover:opacity-100 transition-opacity duration-300"
+          onError={(e) => {
+            console.warn('AirBear mascot image failed to load');
+            e.currentTarget.style.display = 'none';
+          }}
+        />
+      </div>
+
       <Footer />
     </div>
   );

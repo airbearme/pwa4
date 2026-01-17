@@ -20,8 +20,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (userData: { email: string; username: string; password: string; role?: "user" | "driver" | "admin" }) => Promise<void>;
-  loginWithOAuth: (provider: "google" | "apple") => Promise<void>;
+  register: (userData: { email: string; username: string; password: string; confirmPassword: string; role: "user" | "driver" | "admin" }) => Promise<void>;
   logout: () => void;
 }
 
@@ -123,7 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const register = async (userData: { email: string; username: string; password: string }) => {
+  const register = async (userData: { email: string; username: string; password: string; confirmPassword: string; role: "user" | "driver" | "admin" }) => {
     setIsLoading(true);
     try {
       const client = assertSupabase();
@@ -133,7 +132,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         options: {
           data: {
             username: userData.username,
-            role: "user",
+            role: userData.role,
+            fullName: userData.username, // Use username as fullName for now
           },
           emailRedirectTo: `${window.location.origin}/auth`,
         },
@@ -151,26 +151,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const loginWithOAuth = async (provider: "google" | "apple") => {
-    setIsLoading(true);
-    try {
-      const client = assertSupabase();
-      const { error } = await client.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: `${window.location.origin}/auth`,
-          scopes: "email profile",
-        },
-      });
-
-      if (error) throw error;
-    } catch (error: any) {
-      setIsLoading(false);
-      throw new Error(`${provider} login failed: ${error.message || "unknown error"}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const logout = () => {
     const client = getSupabaseClient(false);
@@ -190,7 +170,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
     login,
     register,
-    loginWithOAuth,
     logout,
   };
 

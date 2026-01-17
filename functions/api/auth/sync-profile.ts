@@ -10,7 +10,7 @@ export const onRequestPost: RequestHandler = async (context: any) => {
   try {
     const supabase = createClient(
       context.env.SUPABASE_URL,
-      context.env.SUPABASE_SERVICE_ROLE_KEY
+      context.env.SUPABASE_SECRET_KEY
     )
 
     const { user, profile } = await context.request.json()

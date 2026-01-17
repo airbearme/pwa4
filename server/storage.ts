@@ -636,11 +636,11 @@ class SupabaseStorage implements IStorage {
 }
 
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY;
 
-export const storage: IStorage = supabaseUrl && supabaseServiceRoleKey
+export const storage: IStorage = supabaseUrl && supabaseSecretKey
   ? (() => {
-    const client = createClient(supabaseUrl, supabaseServiceRoleKey);
+    const client = createClient(supabaseUrl, supabaseSecretKey);
     return new SupabaseStorage(client);
   })()
   : new MemStorage();

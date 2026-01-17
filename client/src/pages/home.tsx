@@ -27,43 +27,45 @@ export default function Home() {
   const { data: spots, isLoading } = useQuery({
     queryKey: ["spots"],
     queryFn: async () => {
-      const supabase = getSupabaseClient(false);
-      if (!supabase) return [];
-      const { data, error } = await supabase.from('spots').select('*').eq('is_active', true);
-      if (error) throw error;
-      return data || [];
+      try {
+        const response = await fetch('/api/spots');
+        if (!response.ok) throw new Error('Failed to fetch spots');
+        return await response.json();
+      } catch (error) {
+        console.error('Error fetching spots:', error);
+        return [];
+      }
     }
   });
 
   const { data: analytics } = useQuery<Analytics>({
     queryKey: ["analytics", "overview"],
     queryFn: async () => {
-      const supabase = getSupabaseClient(false);
-      if (!supabase) return {
-        totalSpots: 16,
-        totalRickshaws: 1,
-        activeRickshaws: 1,
-        chargingRickshaws: 0,
-        maintenanceRickshaws: 0,
-        averageBatteryLevel: 95
-      };
-
-      const [spotsRes, airbearsRes] = await Promise.all([
-        supabase.from('spots').select('id', { count: 'exact', head: true }).eq('is_active', true),
-        supabase.from('airbears').select('*')
-      ]);
-
-      const airbears = airbearsRes.data || [];
-      return {
-        totalSpots: spotsRes.count || 0,
-        totalRickshaws: airbears.length,
-        activeRickshaws: airbears.filter((a: any) => a.is_available).length,
-        chargingRickshaws: airbears.filter((a: any) => a.is_charging).length,
-        maintenanceRickshaws: 0,
-        averageBatteryLevel: airbears.length > 0
-          ? Math.round(airbears.reduce((sum: number, a: any) => sum + (a.battery_level || 0), 0) / airbears.length)
-          : 0
-      };
+      try {
+        const response = await fetch('/api/analytics/overview');
+        if (!response.ok) {
+          // Fallback to mock data if API fails
+          return {
+            totalSpots: 16,
+            totalRickshaws: 1,
+            activeRickshaws: 1,
+            chargingRickshaws: 0,
+            maintenanceRickshaws: 0,
+            averageBatteryLevel: 95
+          };
+        }
+        return await response.json();
+      } catch (error) {
+        console.error('Error fetching analytics:', error);
+        return {
+          totalSpots: 16,
+          totalRickshaws: 1,
+          activeRickshaws: 1,
+          chargingRickshaws: 0,
+          maintenanceRickshaws: 0,
+          averageBatteryLevel: 95
+        };
+      }
     }
   });
 
@@ -125,7 +127,7 @@ export default function Home() {
             transition={{ duration: 0.8, delay: 0.2 }}
           >
             <span className="bg-gradient-to-r from-emerald-600 via-lime-500 to-amber-500 bg-clip-text text-transparent animate-pulse-glow airbear-holographic text-outline-strong">
-              AirBear Mobile Bodega
+              Welcome to AirBear
             </span>
             <br />
             <span className="text-foreground airbear-solar-rays">Solar Powered Rideshare</span>

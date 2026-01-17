@@ -29,7 +29,7 @@ export const onRequestPost = async (context: any) => {
     // Note: We'd need to sync this with Supabase here if we want database updates
     // Since this is a Cloudflare Worker, we use the fetch API to talk to Supabase
     const SUPABASE_URL = context.env.SUPABASE_URL
-    const SUPABASE_SERVICE_ROLE_KEY = context.env.SUPABASE_SERVICE_ROLE_KEY
+    const SUPABASE_SECRET_KEY = context.env.SUPABASE_SECRET_KEY
 
     if (event.type === 'payment_intent.succeeded') {
         const paymentIntent = event.data.object as Stripe.PaymentIntent
@@ -42,8 +42,8 @@ export const onRequestPost = async (context: any) => {
             await fetch(`${SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`, {
                 method: 'PATCH',
                 headers: {
-                    'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-                    'apikey': SUPABASE_SERVICE_ROLE_KEY,
+                    'Authorization': `Bearer ${SUPABASE_SECRET_KEY}`,
+                    'apikey': SUPABASE_SECRET_KEY,
                     'Content-Type': 'application/json',
                     'Prefer': 'return=minimal'
                 },
@@ -59,8 +59,8 @@ export const onRequestPost = async (context: any) => {
             await fetch(`${SUPABASE_URL}/rest/v1/rides?id=eq.${rideId}`, {
                 method: 'PATCH',
                 headers: {
-                    'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-                    'apikey': SUPABASE_SERVICE_ROLE_KEY,
+                    'Authorization': `Bearer ${SUPABASE_SECRET_KEY}`,
+                    'apikey': SUPABASE_SECRET_KEY,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ status: 'completed' })
@@ -72,8 +72,8 @@ export const onRequestPost = async (context: any) => {
             await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}`, {
                 method: 'PATCH',
                 headers: {
-                    'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-                    'apikey': SUPABASE_SERVICE_ROLE_KEY,
+                    'Authorization': `Bearer ${SUPABASE_SECRET_KEY}`,
+                    'apikey': SUPABASE_SECRET_KEY,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ status: 'completed' })

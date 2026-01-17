@@ -4,9 +4,9 @@ import { NetworkFirst, CacheFirst, StaleWhileRevalidate } from 'workbox-strategi
 import { createHandlerBoundToURL } from 'workbox-precaching';
 
 // AirBear PWA Service Worker
-const CACHE_NAME = 'airbear-v1.2.1';
-const STATIC_CACHE = 'airbear-static-v1.2.1';
-const DYNAMIC_CACHE = 'airbear-dynamic-v1.2.1';
+const CACHE_NAME = 'airbear-v1.2.2';
+const STATIC_CACHE = 'airbear-static-v1.2.2';
+const DYNAMIC_CACHE = 'airbear-dynamic-v1.2.2';
 
 // Precaching from Vite
 precacheAndRoute(self.__WB_MANIFEST || []);
@@ -50,7 +50,15 @@ self.addEventListener('install', () => {
 // Activate event
 self.addEventListener('activate', (event) => {
     console.log('Service Worker: Activating...');
-    event.waitUntil(self.clients.claim());
+    event.waitUntil(
+        caches.keys().then((keys) =>
+            Promise.all(
+                keys
+                    .filter((key) => ![CACHE_NAME, STATIC_CACHE, DYNAMIC_CACHE].includes(key))
+                    .map((key) => caches.delete(key))
+            )
+        ).then(() => self.clients.claim())
+    );
 });
 
 // Background sync for ride bookings when offline

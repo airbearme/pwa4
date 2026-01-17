@@ -8,20 +8,26 @@ import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 if (!stripeSecretKey) {
-  throw new Error("STRIPE_SECRET_KEY is required for live Stripe, Apple Pay, and Google Pay.");
+  console.warn("⚠️ STRIPE_SECRET_KEY is not configured. Stripe functionality will be disabled.");
 }
 
-const stripe = new Stripe(stripeSecretKey, {
-});
+const stripe = stripeSecretKey ? new Stripe(stripeSecretKey, {}) : null;
+
+const getStripe = () => {
+  if (!stripe) {
+    throw new Error("Stripe is not configured. Set STRIPE_SECRET_KEY.");
+  }
+  return stripe;
+};
 
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const supabaseAdmin = supabaseUrl && supabaseServiceRoleKey
-  ? createSupabaseAdminClient(supabaseUrl, supabaseServiceRoleKey, { auth: { autoRefreshToken: false } })
+const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY;
+const supabaseAdmin = supabaseUrl && supabaseSecretKey
+  ? createSupabaseAdminClient(supabaseUrl, supabaseSecretKey, { auth: { autoRefreshToken: false } })
   : null;
 
 if (!supabaseAdmin) {
-  console.warn("⚠️ Supabase admin client not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY for live auth.");
+  console.warn("⚠️ Supabase admin client not configured. Set SUPABASE_URL and SUPABASE_SECRET_KEY for live auth.");
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -30,8 +36,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({
       status: "ok",
       timestamp: new Date().toISOString(),
-      env: process.env.NODE_ENV,
-      version: "1.2.1"
+      supabaseUrl: process.env.SUPABASE_URL ? "configured" : "missing",
+      supabaseSecretKey: process.env.SUPABASE_SECRET_KEY ? "configured" : "missing",
+      stripeSecretKey: process.env.STRIPE_SECRET_KEY ? "configured" : "missing",
     });
   });
 
@@ -86,7 +93,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/register", async (req, res) => {
     try {
       if (!supabaseAdmin) {
-        return res.status(500).json({ message: "Supabase is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY." });
+        return res.status(500).json({ message: "Supabase is not configured. Set SUPABASE_URL and SUPABASE_SECRET_KEY." });
       }
 
       const userData = profileSchema.extend({ password: z.string().min(6) }).parse(req.body);
@@ -119,7 +126,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/login", async (req, res) => {
     try {
       if (!supabaseAdmin) {
-        return res.status(500).json({ message: "Supabase is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY." });
+        return res.status(500).json({ message: "Supabase is not configured. Set SUPABASE_URL and SUPABASE_SECRET_KEY." });
       }
 
       const { email, password } = z.object({
@@ -149,7 +156,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/sync-profile", async (req, res) => {
     try {
       if (!supabaseAdmin) {
-        return res.status(500).json({ message: "Supabase is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY." });
+        return res.status(500).json({ message: "Supabase is not configured. Set SUPABASE_URL and SUPABASE_SECRET_KEY." });
       }
 
       const payload = profileSchema.parse(req.body);
@@ -290,7 +297,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       } else {
         // Create Stripe PaymentIntent
-        paymentIntent = await stripe.paymentIntents.create({
+        paymentIntent = await getStripe().paymentIntents.create({
           amount: Math.round(amount * 100), // Convert to cents
           currency: "usd",
           automatic_payment_methods: {
@@ -362,7 +369,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { userId, size, amount } = req.body;
 
       // Create Stripe PaymentIntent for CEO T-shirt
-      const paymentIntent = await stripe.paymentIntents.create({
+      const paymentIntent = await getStripe().paymentIntents.create({
         amount: 10000, // $100.00 in cents
         currency: "usd",
         automatic_payment_methods: {
@@ -434,7 +441,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let event;
       try {
-        event = stripe.webhooks.constructEvent((req as any).rawBody, sig, endpointSecret);
+        event = getStripe().webhooks.constructEvent((req as any).rawBody, sig, endpointSecret);
       } catch (err: any) {
         console.error(`Webhook signature verification failed: ${err.message}`);
         return res.status(400).json({ message: `Webhook signature verification failed: ${err.message}` });

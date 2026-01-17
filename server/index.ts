@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
+import helmet from "helmet";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
@@ -12,6 +13,88 @@ app.use(express.json({
   }
 }));
 app.use(express.urlencoded({ extended: false }));
+
+// Security middleware with CSP
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          "'unsafe-eval'",
+          "https://js.stripe.com",
+          "https://unpkg.com",
+          "https://cdnjs.cloudflare.com",
+          "https://vercel.live",
+          "https://*.facebook.com"
+        ],
+        scriptSrcElem: [
+          "'self'",
+          "'unsafe-inline'",
+          "https://js.stripe.com",
+          "https://unpkg.com",
+          "https://cdnjs.cloudflare.com",
+          "https://vercel.live",
+          "https://*.facebook.com"
+        ],
+        styleSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          "https://unpkg.com",
+          "https://cdnjs.cloudflare.com",
+          "https://fonts.googleapis.com"
+        ],
+        imgSrc: [
+          "'self'",
+          "data:",
+          "blob:",
+          "https://*.stripe.com",
+          "https://unpkg.com",
+          "https://cdnjs.cloudflare.com",
+          "https://*.facebook.com",
+          "https://*.fbcdn.net"
+        ],
+        fontSrc: [
+          "'self'",
+          "https://unpkg.com",
+          "https://cdnjs.cloudflare.com",
+          "https://fonts.gstatic.com",
+          "data:"
+        ],
+        connectSrc: [
+          "'self'",
+          "https://*.supabase.co",
+          "https://*.stripe.com",
+          "https://vercel.live",
+          "https://*.facebook.com",
+          "wss://*.supabase.co"
+        ],
+        frameSrc: [
+          "'self'",
+          "https://js.stripe.com",
+          "https://*.facebook.com"
+        ],
+        mediaSrc: [
+          "'self'",
+          "https://*.facebook.com",
+          "https://*.fbcdn.net"
+        ],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: [
+          "'self'",
+          "https://*.stripe.com",
+          "https://*.facebook.com"
+        ],
+        frameAncestors: ["'none'"],
+        upgradeInsecureRequests: []
+      }
+    },
+    crossOriginEmbedderPolicy: false,
+  })
+);
 
 // Logging middleware
 app.use((req, res, next) => {
@@ -88,4 +171,3 @@ if (import.meta.url === `file://${process.argv[1]}` || process.env.NODE_ENV !== 
 }
 
 export default app;
-
