@@ -635,8 +635,8 @@ class SupabaseStorage implements IStorage {
   }
 }
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY;
+const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 // Force using MemStorage for development/testing when using test credentials
 const isUsingTestCredentials =
