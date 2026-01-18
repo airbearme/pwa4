@@ -33,6 +33,7 @@ app.use(
         scriptSrcElem: [
           "'self'",
           "'unsafe-inline'",
+          "'unsafe-eval'",
           "https://js.stripe.com",
           "https://unpkg.com",
           "https://cdnjs.cloudflare.com",
