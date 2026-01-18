@@ -2,10 +2,20 @@ import { createApp } from "../server/index.js";
 
 export default async function handler(req: any, res: any) {
     try {
+        console.log('[API Request]', req.method, req.url);
         const { app } = await createApp();
         return app(req, res);
     } catch (error: any) {
         console.error('[API Handler Error]', error);
+        console.error('[Error Details]', {
+            message: error.message,
+            stack: error.stack,
+            env: {
+                NODE_ENV: process.env.NODE_ENV,
+                SUPABASE_URL: process.env.SUPABASE_URL ? 'configured' : 'missing',
+                STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY ? 'configured' : 'missing'
+            }
+        });
         res.status(500).json({ 
             error: 'Server initialization failed', 
             message: error.message,
