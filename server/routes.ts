@@ -301,22 +301,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
           amount: Math.round(amount * 100), // Convert to cents
           currency: "usd",
           automatic_payment_methods: {
-            enabled: true,
+            enabled: ['card', 'apple_pay', 'google_pay']
           },
           metadata: {
-            orderId: orderId || "",
-            rideId: rideId || "",
-            userId: userId || "",
+            orderId: orderId || null,
+            rideId: rideId || null,
+            userId: userId || null
           }
         });
-
-        res.json({
-          clientSecret: paymentIntent.client_secret,
-          paymentIntentId: paymentIntent.id
-        });
       }
+
+      res.json({
+        clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id,
+        amount: paymentIntent.amount,
+        currency: paymentIntent.currency,
+        status: paymentIntent.status
+      });
     } catch (error: any) {
-      res.status(500).json({ message: "Error creating payment intent: " + error.message });
+      console.error('Payment intent creation error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Stripe checkout session route
+  app.post("/api/stripe/create-checkout-session", async (req, res) => {
+    try {
+      const { amount, currency = "usd", successUrl, cancelUrl } = req.body;
+
+      if (!amount || amount <= 0) {
+        return res.status(400).json({ message: "Invalid amount" });
+      }
+
+      const session = await getStripe().checkout.sessions.create({
+        payment_method_types: ['card'],
+        mode: 'payment',
+        line_items: [{
+          price_data: {
+            currency: currency,
+            product_data: {
+              name: 'AirBear Ride Credit',
+              description: 'Add credits to your AirBear account',
+            },
+            unit_amount: Math.round(amount * 100), // Convert to cents
+          },
+          quantity: 1,
+        }],
+        success_url: successUrl || `${req.headers.origin}/dashboard`,
+        cancel_url: cancelUrl || `${req.headers.origin}/checkout`,
+      });
+
+      res.json({
+        sessionId: session.id,
+        url: session.url,
+      });
+    } catch (error: any) {
+      console.error('Checkout session creation error:', error);
+      res.status(500).json({ message: error.message });
     }
   });
 
