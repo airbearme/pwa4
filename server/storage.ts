@@ -638,9 +638,23 @@ class SupabaseStorage implements IStorage {
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY;
 
-export const storage: IStorage = supabaseUrl && supabaseSecretKey
+// Force using MemStorage for development/testing when using test credentials
+const isUsingTestCredentials =
+  supabaseUrl?.includes('test-project.supabase.co') ||
+  supabaseSecretKey?.includes('test-supabase-secret-key-for-development-only');
+
+// Also force MemStorage if USE_MOCK_DATABASE is explicitly set
+const useMockDatabase = process.env.USE_MOCK_DATABASE === 'true' ||
+                       process.env.NODE_ENV === 'development' ||
+                       process.env.VERCEL_ENV === 'development';
+
+export const storage: IStorage = !isUsingTestCredentials && !useMockDatabase && supabaseUrl && supabaseSecretKey
   ? (() => {
+    console.log('=€ Using SupabaseStorage for production');
     const client = createClient(supabaseUrl, supabaseSecretKey);
     return new SupabaseStorage(client);
   })()
-  : new MemStorage();
+  : (() => {
+    console.log('=¾ Using MemStorage for development/testing');
+    return new MemStorage();
+  })();
