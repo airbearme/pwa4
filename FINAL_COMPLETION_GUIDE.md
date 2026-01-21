@@ -8,7 +8,7 @@
 **Solution:** Apply corrected schema with camelCase columns
 
 #### Step 1: Apply Database Schema
-1. **Open:** https://supabase.com/dashboard/project/fushiklvahmujvzuveje
+1. **Open:** https://supabase.com/dashboard/project/your-project-ref
 2. **Go to:** SQL Editor
 3. **Paste and run:** `supabase-schema-correct.sql`
 

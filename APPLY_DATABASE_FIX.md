@@ -7,7 +7,7 @@
 
 ### Step 1: Open Supabase Dashboard
 1. Go to: https://supabase.com/dashboard
-2. Click on your project: `fushiklvahmujvzuveje`
+2. Click on your project: `your-project-ref`
 3. Click on "SQL Editor" in the left sidebar
 
 ### Step 2: Apply Corrected Schema

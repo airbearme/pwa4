@@ -32,18 +32,18 @@ This guide walks you through setting up Google and Apple OAuth for your AirBear 
    - Authorized JavaScript origins:
      ```
      https://airbear.me
-     https://fofmrqgcidfenbevayrg.supabase.co
+     https://your-project-ref.supabase.co
      ```
    - Authorized redirect URIs:
      ```
-     https://fofmrqgcidfenbevayrg.supabase.co/auth/v1/callback
+     https://your-project-ref.supabase.co/auth/v1/callback
      ```
    - Click "Create"
 
 5. **Copy the Client ID and Client Secret** (you'll need these next)
 
 ### Step 4: Configure in Supabase
-1. Go to: https://supabase.com/dashboard/project/fofmrqgcidfenbevayrg/auth/providers
+1. Go to: https://supabase.com/dashboard/project/your-project-ref/auth/providers
 2. Find "Google" provider
 3. Enable it
 4. Paste your **Client ID**
@@ -86,11 +86,11 @@ This guide walks you through setting up Google and Apple OAuth for your AirBear 
 8. Domains and Subdomains:
    ```
    airbear.me
-   fofmrqgcidfenbevayrg.supabase.co
+   your-project-ref.supabase.co
    ```
 9. Return URLs:
    ```
-   https://fofmrqgcidfenbevayrg.supabase.co/auth/v1/callback
+   https://your-project-ref.supabase.co/auth/v1/callback
    ```
 10. Click "Save" → "Continue" → "Register"
 
@@ -109,7 +109,7 @@ This guide walks you through setting up Google and Apple OAuth for your AirBear 
 2. Copy your **Team ID** (10 characters)
 
 ### Step 5: Configure in Supabase
-1. Go to: https://supabase.com/dashboard/project/fofmrqgcidfenbevayrg/auth/providers
+1. Go to: https://supabase.com/dashboard/project/your-project-ref/auth/providers
 2. Find "Apple" provider
 3. Enable it
 4. Fill in:
@@ -132,7 +132,7 @@ This guide walks you through setting up Google and Apple OAuth for your AirBear 
 ### Google OAuth Issues
 
 **Error: "redirect_uri_mismatch"**
-- Check that `https://fofmrqgcidfenbevayrg.supabase.co/auth/v1/callback` is in your authorized redirect URIs
+- Check that `https://your-project-ref.supabase.co/auth/v1/callback` is in your authorized redirect URIs
 - Make sure there are no trailing slashes
 
 **Error: "Access blocked: This app's request is invalid"**
@@ -222,16 +222,16 @@ Once OAuth is configured:
 
 ### Supabase Auth Providers URL
 ```
-https://supabase.com/dashboard/project/fofmrqgcidfenbevayrg/auth/providers
+https://supabase.com/dashboard/project/your-project-ref/auth/providers
 ```
 
 ### Redirect URI (for all providers)
 ```
-https://fofmrqgcidfenbevayrg.supabase.co/auth/v1/callback
+https://your-project-ref.supabase.co/auth/v1/callback
 ```
 
 ### Authorized Origins
 ```
 https://airbear.me
-https://fofmrqgcidfenbevayrg.supabase.co
+https://your-project-ref.supabase.co
 ```

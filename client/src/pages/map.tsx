@@ -527,12 +527,12 @@ export default function Map() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          user_id: user?.id || 'demo-user',
-          pickup_spot_id: selectedSpot.id,
-          dropoff_spot_id: selectedDestination.id,
-          airbear_id: '00000000-0000-0000-0000-000000000001',
-          fare,
-          distance,
+          userId: user?.id || 'demo-user',
+          pickupSpotId: selectedSpot.id,
+          dropoffSpotId: selectedDestination.id,
+          airbearId: '00000000-0000-0000-0000-000000000001',
+          fare: fare.toString(),
+          distance: distance.toString(),
           status: 'pending'
         })
       });

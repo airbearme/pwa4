@@ -11,7 +11,7 @@ The production deployment is using Supabase, but the database schema needs to be
 
 ### 1. Access Your Supabase Dashboard
 - Go to: https://supabase.com/dashboard
-- Navigate to your project: `fushiklvahmujvzuveje`
+- Navigate to your project: `your-project-ref`
 
 ### 2. Run the Database Schema
 1. Open the **SQL Editor** in Supabase

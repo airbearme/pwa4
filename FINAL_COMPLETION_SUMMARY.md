@@ -106,7 +106,7 @@
 ## 🚀 **Next Steps for User:**
 
 ### 🗄️ **Apply Database Schema (Required for User Registration):**
-1. **Open:** https://supabase.com/dashboard/project/fushiklvahmujvzuveje
+1. **Open:** https://supabase.com/dashboard/project/your-project-ref
 2. **Go to:** SQL Editor
 3. **Paste and run:** `supabase-schema-correct.sql`
 4. **Test:** Register a new account

@@ -9,7 +9,7 @@ const requiredGroups = [
   },
   {
     name: 'client:supabase-key',
-    keys: ['VITE_SUPABASE_ANON_KEY', 'VITE_SUPABASE_PUBLISHABLE_KEY'],
+    keys: ['VITE_SUPABASE_ANON_KEY'],
   },
   {
     name: 'server:stripe-secret',
@@ -25,7 +25,7 @@ const requiredGroups = [
   },
   {
     name: 'server:supabase-service-key',
-    keys: ['SUPABASE_SECRET_KEY', 'SUPABASE_SERVICE_ROLE_KEY'],
+    keys: ['SUPABASE_SERVICE_ROLE_KEY'],
   },
 ];
 

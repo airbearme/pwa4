@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://gtomvmymfcjswvxuclii.supabase.co';
+const supabaseUrl = 'https://your-project-ref.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0b212bXltZmNqc3d2eHVjbGlpIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTU4Mzk3MywiZXhwIjoyMDcxMTU5OTczfQ.gbAh5_qDmUWiG65qHGUme9RyKOQmLB25LGkSfRw7_BA';
 
 console.log('🔌 Testing Purple Zebra connection...');

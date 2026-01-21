@@ -14,7 +14,7 @@ The database schema column names don't match the application code:
 
 **Run this corrected schema in your Supabase dashboard:**
 
-1. **Open:** https://supabase.com/dashboard/project/fushiklvahmujvzuveje
+1. **Open:** https://supabase.com/dashboard/project/your-project-ref
 2. **Go to:** SQL Editor
 3. **Paste and run:** `supabase-schema-correct.sql`
 

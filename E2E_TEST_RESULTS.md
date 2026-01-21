@@ -27,7 +27,7 @@ The database schema has not been applied yet. The application code uses **camelC
 
 **Apply the corrected database schema:**
 
-1. **Open:** https://supabase.com/dashboard/project/fushiklvahmujvzuveje
+1. **Open:** https://supabase.com/dashboard/project/your-project-ref
 2. **Go to:** SQL Editor
 3. **Paste and run:** `supabase-schema-correct.sql`
 

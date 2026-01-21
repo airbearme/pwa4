@@ -394,7 +394,7 @@ class FinalValidationRunner {
       console.log('⚠️  Some tests failed. Review and fix issues.');
       if (this.results.tests.some(t => t.error && t.error.includes('Database schema'))) {
         console.log('\n🔧 DATABASE SCHEMA FIX NEEDED:');
-        console.log('1. Open: https://supabase.com/dashboard/project/fushiklvahmujvzuveje');
+        console.log('1. Open: https://supabase.com/dashboard/project/your-project-ref');
         console.log('2. Go to: SQL Editor');
         console.log('3. Run: supabase-schema-correct.sql');
         console.log('4. Re-run tests to verify fix');

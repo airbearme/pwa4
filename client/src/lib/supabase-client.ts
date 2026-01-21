@@ -1,7 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 let supabase: SupabaseClient | null = null;
 
@@ -10,12 +10,12 @@ let supabase: SupabaseClient | null = null;
  * env vars throw so we don't silently fall back to demo mode.
  */
 export function getSupabaseClient(requireConfigured = false): SupabaseClient | null {
-  if (!supabase && supabaseUrl && supabasePublishableKey) {
-    supabase = createClient(supabaseUrl, supabasePublishableKey);
+  if (!supabase && supabaseUrl && supabaseAnonKey) {
+    supabase = createClient(supabaseUrl, supabaseAnonKey);
   }
 
   if (requireConfigured && !supabase) {
-    throw new Error("Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY for live auth.");
+    throw new Error("Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY for live auth.");
   }
 
   return supabase;
