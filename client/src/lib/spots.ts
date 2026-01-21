@@ -155,6 +155,15 @@ export const spots: Spot[] = [
     amenities: ['Laboratories', 'Research Facilities', 'Classrooms', 'Science Library'],
     isActive: true,
   },
+  {
+    id: 'downtown-station',
+    name: 'Downtown Station',
+    latitude: 42.101234,
+    longitude: -75.915678,
+    description: 'Central transportation hub and drop-off location',
+    amenities: ['Drop-off Point', 'Waiting Area', 'Shelter', 'Information Desk'],
+    isActive: true,
+  },
 ];
 
 // Helper functions for spots

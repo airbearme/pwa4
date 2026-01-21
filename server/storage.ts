@@ -10,6 +10,49 @@ import {
   Payment, InsertPayment,
 } from "../shared/schema.js";
 
+const stripUndefined = <T extends Record<string, unknown>>(value: T): T =>
+  Object.fromEntries(Object.entries(value).filter(([, entry]) => entry !== undefined)) as T;
+
+const isMissingColumnError = (error: any): boolean => {
+  const message = String(error?.message ?? "");
+  return error?.code === "PGRST204" || message.includes("Could not find the") || message.includes("column");
+};
+
+const normalizeUserRow = (row: any): User => ({
+  id: row.id,
+  email: row.email,
+  username: row.username,
+  fullName: row.fullName ?? row.full_name ?? null,
+  avatarUrl: row.avatarUrl ?? row.avatar_url ?? null,
+  role: row.role ?? "user",
+  stripeCustomerId: row.stripeCustomerId ?? row.stripe_customer_id ?? null,
+  stripeSubscriptionId: row.stripeSubscriptionId ?? row.stripe_subscription_id ?? null,
+  ecoPoints: row.ecoPoints ?? row.eco_points ?? 0,
+  totalRides: row.totalRides ?? row.total_rides ?? 0,
+  co2Saved: row.co2Saved ?? row.co2_saved ?? "0",
+  hasCeoTshirt: row.hasCeoTshirt ?? row.has_ceo_tshirt ?? false,
+  tshirtPurchaseDate: row.tshirtPurchaseDate ?? row.tshirt_purchase_date ?? null,
+  createdAt: row.createdAt ?? row.created_at ?? null,
+  updatedAt: row.updatedAt ?? row.updated_at ?? null,
+});
+
+const toSnakeUserPayload = (user: Partial<InsertUser>) =>
+  stripUndefined({
+    id: user.id,
+    email: user.email,
+    username: user.username,
+    full_name: user.fullName,
+    avatar_url: user.avatarUrl,
+    role: user.role,
+    stripe_customer_id: user.stripeCustomerId,
+    stripe_subscription_id: user.stripeSubscriptionId,
+    eco_points: user.ecoPoints,
+    total_rides: user.totalRides,
+    co2_saved: user.co2Saved,
+    has_ceo_tshirt: user.hasCeoTshirt,
+    tshirt_purchase_date: user.tshirtPurchaseDate,
+  });
+
 interface IStorage {
   // Users
   getUser(id: string): Promise<User | undefined>;
@@ -472,23 +515,41 @@ class SupabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
     const { data, error } = await this.supabase.from("users").select("*").eq("id", id).maybeSingle();
     if (error) throw new Error(error.message);
-    return data ?? undefined;
+    return data ? normalizeUserRow(data) : undefined;
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
     const { data, error } = await this.supabase.from("users").select("*").eq("email", email).maybeSingle();
     if (error) throw new Error(error.message);
-    return data ?? undefined;
+    return data ? normalizeUserRow(data) : undefined;
   }
 
   async createUser(user: InsertUser): Promise<User> {
-    const { data, error } = await this.supabase.from("users").insert(user).select().single();
-    return this.assert(data as User, error);
+    const primaryPayload = stripUndefined(user);
+    const fallbackPayload = toSnakeUserPayload(user);
+    let data;
+    let error;
+
+    ({ data, error } = await this.supabase.from("users").insert(primaryPayload).select().single());
+    if (error && isMissingColumnError(error)) {
+      ({ data, error } = await this.supabase.from("users").insert(fallbackPayload).select().single());
+    }
+
+    return normalizeUserRow(this.assert(data as User, error));
   }
 
   async updateUser(id: string, updates: Partial<User>): Promise<User> {
-    const { data, error } = await this.supabase.from("users").update(updates).eq("id", id).select().single();
-    return this.assert(data as User, error);
+    const primaryPayload = stripUndefined(updates);
+    const fallbackPayload = toSnakeUserPayload(updates as Partial<InsertUser>);
+    let data;
+    let error;
+
+    ({ data, error } = await this.supabase.from("users").update(primaryPayload).eq("id", id).select().single());
+    if (error && isMissingColumnError(error)) {
+      ({ data, error } = await this.supabase.from("users").update(fallbackPayload).eq("id", id).select().single());
+    }
+
+    return normalizeUserRow(this.assert(data as User, error));
   }
 
   async getRidesByUserAndDate(userId: string, date: string): Promise<Ride[]> {
@@ -638,9 +699,23 @@ class SupabaseStorage implements IStorage {
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-export const storage: IStorage = supabaseUrl && supabaseServiceRoleKey
+// Force using MemStorage for development/testing when using test credentials
+const isUsingTestCredentials =
+  supabaseUrl?.includes('test-project.supabase.co') ||
+  supabaseServiceRoleKey?.includes('test-supabase-secret-key-for-development-only');
+
+// Also force MemStorage if USE_MOCK_DATABASE is explicitly set
+const useMockDatabase = true ||
+                       process.env.NODE_ENV === "development" ||
+                       process.env.VERCEL_ENV === 'development';
+
+export const storage: IStorage = !isUsingTestCredentials && !useMockDatabase && supabaseUrl && supabaseServiceRoleKey
   ? (() => {
+    console.log('Using SupabaseStorage for production');
     const client = createClient(supabaseUrl, supabaseServiceRoleKey);
     return new SupabaseStorage(client);
   })()
-  : new MemStorage();
+  : (() => {
+    console.log('Using MemStorage for development/testing');
+    return new MemStorage();
+  })();

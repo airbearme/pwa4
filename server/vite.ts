@@ -68,6 +68,60 @@ export function serveStatic(app: Express) {
     }
   }));
 
+  // Special handling for manifest.json to ensure it's accessible
+  app.get('/manifest.json', (req, res) => {
+    const manifestPath = path.resolve(distPath, 'manifest.json');
+    if (fs.existsSync(manifestPath)) {
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+      res.sendFile(manifestPath);
+    } else {
+      // Fallback manifest for development
+      const fallbackManifest = {
+        name: 'AirBear - Solar Rickshaw Ride Share',
+        short_name: 'AirBear',
+        description: 'Eco-friendly solar-powered rides in Binghamton, NY with onboard bodegas',
+        theme_color: '#10b981',
+        background_color: '#000000',
+        display: 'standalone',
+        orientation: 'portrait-primary',
+        scope: '/',
+        start_url: '/',
+        icons: [
+          {
+            src: '/airbear-mascot.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any maskable'
+          },
+          {
+            src: '/airbear-mascot.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable'
+          }
+        ],
+        shortcuts: [
+          {
+            name: "Book a Ride",
+            short_name: "Book Ride",
+            description: "Quickly book an AirBear ride",
+            url: "/map"
+          },
+          {
+            name: "Driver Dashboard",
+            short_name: "Driver",
+            description: "Access driver dashboard",
+            url: "/driver-dashboard"
+          }
+        ]
+      };
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+      res.json(fallbackManifest);
+    }
+  });
+
   // fall through to index.html if the file doesn't exist
   app.use("*", (_req, res) => {
     res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');

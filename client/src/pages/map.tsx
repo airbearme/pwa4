@@ -84,25 +84,23 @@ export default function Map() {
   const { data: spotsData = [], isLoading: spotsLoading, error: spotsError } = useQuery<Spot[]>({
     queryKey: ["spots"],
     queryFn: async () => {
-      const supabase = getSupabaseClient(false);
-      if (!supabase) {
-        // Fallback to static data if no supabase
+      try {
+        const response = await fetch('/api/spots');
+        if (!response.ok) {
+          // Fallback to static data if API fails
+          return getActiveSpots().map(s => ({ ...s, latitude: Number(s.latitude), longitude: Number(s.longitude) }));
+        }
+        const data = await response.json();
+        return data.map((spot: any) => ({
+          ...spot,
+          latitude: Number(spot.latitude ?? spot.lat ?? spot.latitide),
+          longitude: Number(spot.longitude ?? spot.lng ?? spot.long ?? spot.lon),
+          isActive: spot.is_active ?? true,
+        }));
+      } catch (error) {
+        console.error('Error fetching spots:', error);
         return getActiveSpots().map(s => ({ ...s, latitude: Number(s.latitude), longitude: Number(s.longitude) }));
       }
-
-      const { data, error } = await supabase
-        .from('spots')
-        .select('*')
-        .eq('is_active', true);
-
-      if (error) throw error;
-
-      return (data || []).map((spot: any) => ({
-        ...spot,
-        latitude: Number(spot.latitude ?? spot.lat ?? spot.latitide),
-        longitude: Number(spot.longitude ?? spot.lng ?? spot.long ?? spot.lon),
-        isActive: spot.is_active ?? true,
-      }));
     },
     retry: 1,
   });
@@ -110,25 +108,26 @@ export default function Map() {
   const { data: rickshawsQueryData = [], isLoading: rickshawLoading, error: rickshawError } = useQuery<Rickshaw[]>({
     queryKey: ["airbears-initial"],
     queryFn: async () => {
-      const supabase = getSupabaseClient(false);
-      if (!supabase) return [];
-
-      const { data, error } = await supabase
-        .from('airbears')
-        .select('*');
-
-      if (error) throw error;
-
-      return (data || []).map((item: any) => ({
-        id: item.id,
-        currentSpotId: item.current_spot_id ?? "",
-        latitude: Number(item.latitude ?? 0),
-        longitude: Number(item.longitude ?? 0),
-        batteryLevel: Number(item.battery_level ?? 100),
-        isAvailable: item.is_available ?? false,
-        isCharging: item.is_charging ?? false,
-        heading: Number(item.heading ?? 0),
-      }));
+      try {
+        const response = await fetch('/api/rickshaws');
+        if (!response.ok) {
+          return [];
+        }
+        const data = await response.json();
+        return data.map((item: any) => ({
+          id: item.id,
+          currentSpotId: item.current_spot_id ?? "",
+          latitude: Number(item.latitude ?? 0),
+          longitude: Number(item.longitude ?? 0),
+          batteryLevel: Number(item.battery_level ?? 100),
+          isAvailable: item.is_available ?? false,
+          isCharging: item.is_charging ?? false,
+          heading: Number(item.heading ?? 0),
+        }));
+      } catch (error) {
+        console.error('Error fetching rickshaws:', error);
+        return [];
+      }
     },
     retry: 1,
   });
@@ -522,24 +521,27 @@ export default function Map() {
     const fare = estimateRideFare(distance);
 
     try {
-      const supabase = getSupabaseClient(false);
-      if (!supabase) throw new Error("Supabase client not available");
-
-      const { data, error } = await supabase
-        .from('rides')
-        .insert({
-          user_id: user?.id,
-          pickup_spot_id: selectedSpot.id,
-          dropoff_spot_id: selectedDestination.id,
-          airbear_id: '00000000-0000-0000-0000-000000000001', // Seed this in DB
-          fare,
-          distance,
+      const response = await fetch('/api/rides', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user?.id || 'demo-user',
+          pickupSpotId: selectedSpot.id,
+          dropoffSpotId: selectedDestination.id,
+          airbearId: '00000000-0000-0000-0000-000000000001',
+          fare: fare.toString(),
+          distance: distance.toString(),
           status: 'pending'
         })
-        .select()
-        .single();
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error('Failed to book ride');
+      }
+
+      const rideData = await response.json();
 
       toast({
         title: "🎉 Ride Booked!",

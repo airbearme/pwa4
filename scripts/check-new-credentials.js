@@ -3,17 +3,17 @@ import { createClient } from '@supabase/supabase-js';
 const credentials = [
   {
     name: 'archon-chatty',
-    url: 'https://etzsxcurkrjfmanhrgou.supabase.co',
+    url: 'https://your-project-ref.supabase.co',
     key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0enN4Y3Vya3JqZm1hbmhyZ291Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTc3MDE5NSwiZXhwIjoyMDc3MzQ2MTk1fQ.sWfNSEKOoNWIoYDVomVyXaFIgOr23CSjoR77CePiC3g'
   },
   {
     name: 'supabase-purple-zebra',
-    url: 'https://gtomvmymfcjswvxuclii.supabase.co',
+    url: 'https://your-project-ref.supabase.co',
     key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0b212bXltZmNqc3d2eHVjbGlpIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTU4Mzk3MywiZXhwIjoyMDcxMTU5OTczfQ.gbAh5_qDmUWiG65qHGUme9RyKOQmLB25LGkSfRw7_BA'
   },
   {
       name: 'airbearme-project',
-      url: 'https://xckggdmqfqajatytmiko.supabase.co',
+      url: 'https://your-project-ref.supabase.co',
       key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhja2dnZG1xZnFhamF0eXRtaWtvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTU2NjQzMSwiZXhwIjoyMDcxMTQyNDMxfQ.xlWcDC0-orIG5CHgExH3WW21r5VBNJcgIM2KATwDhIY'
   }
 ];

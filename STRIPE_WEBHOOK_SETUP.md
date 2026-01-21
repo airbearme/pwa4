@@ -31,7 +31,7 @@ Webhooks allow Stripe to notify your server when payment events occur (successfu
 
 ### Endpoint URL
 
-**IMPORTANT:** You need a backend server URL for webhooks. Since IONOS only hosts static files, you have two options:
+**IMPORTANT:** You need a backend server URL for webhooks. Use your Vercel deployment URL (or another backend host).
 
 #### Option A: Deploy Backend to Vercel (Recommended - Free)
 ```
@@ -358,4 +358,4 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 - Code: `server/routes.ts` (already implemented)
 - Environment: `.env` file
 
-**Critical:** Webhooks require a live backend server. Your current IONOS hosting only supports static files, so you'll need to deploy the backend separately to Vercel, Railway, or similar.
+**Critical:** Webhooks require a live backend server. Make sure your backend is deployed (e.g., Vercel) before enabling webhooks.

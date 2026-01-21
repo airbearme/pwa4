@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
-import { Moon, Sun, Menu, User, Settings, LogOut, Award, Gift } from "lucide-react";
+import { Moon, Sun, Menu, User, Settings, LogOut, Award, Gift, Map, Store, Trophy, Leaf } from "lucide-react";
 import { useTheme } from "next-themes";
 import RickshawWheel from "@/components/airbear-wheel";
 import { useAuth } from "@/hooks/use-auth";
@@ -23,11 +23,11 @@ export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navigation = [
-    { name: "Rides", href: "/map", icon: "fas fa-map" },
-    { name: "Bodega", href: "/bodega", icon: "fas fa-store" },
-    { name: "Challenges", href: "/challenges", icon: "fas fa-trophy" },
-    { name: "Rewards", href: "/rewards", icon: "fas fa-gift" },
-    { name: "Impact", href: "/", icon: "fas fa-leaf", scrollTo: "eco" },
+    { name: "Rides", href: "/map", Icon: Map },
+    { name: "Bodega", href: "/bodega", Icon: Store },
+    { name: "Challenges", href: "/challenges", Icon: Trophy },
+    { name: "Rewards", href: "/rewards", Icon: Gift },
+    { name: "Impact", href: "/", Icon: Leaf, scrollTo: "eco" },
   ];
 
   const isActive = (href: string) => {
@@ -92,7 +92,7 @@ export default function Header() {
                     }
                   }}
                 >
-                  <i className={`${item.icon} text-sm`}></i>
+                  <item.Icon className="h-4 w-4" />
                   <span>{item.name}</span>
                 </motion.a>
               </Link>
@@ -237,7 +237,7 @@ export default function Header() {
                           whileTap={{ scale: 0.95 }}
                           data-testid={`mobile-link-${item.name.toLowerCase()}`}
                         >
-                          <i className={`${item.icon} text-lg`}></i>
+                          <item.Icon className="h-5 w-5" />
                           <span className="text-lg">{item.name}</span>
                         </motion.a>
                       </Link>

@@ -348,23 +348,20 @@ export const purchaseCeoTshirt = async (data: PaymentIntentData & { size: string
 // Free ride validation for CEO T-shirt holders
 export const validateFreeRide = async (userId: string): Promise<{ canRideFree: boolean; reason?: string }> => {
   try {
-    const { getSupabaseClient } = await import("./supabase-client");
-    const supabase = getSupabaseClient(false);
-    if (!supabase) throw new Error("Supabase unavailable");
+    const response = await fetch(`/api/users/${userId}/free-ride-status`);
 
-    const { data, error } = await supabase
-      .from('users')
-      .select('has_ceo_tshirt, tshirt_purchase_date')
-      .eq('id', userId)
-      .single();
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to validate free ride status');
+    }
 
-    if (error) throw error;
+    const result = await response.json();
 
-    if (data?.has_ceo_tshirt) {
+    if (result.canRideFree) {
       return { canRideFree: true };
     }
 
-    return { canRideFree: false, reason: "No CEO T-shirt found" };
+    return { canRideFree: false, reason: result.reason || "No CEO T-shirt found" };
   } catch (error: any) {
     return {
       canRideFree: false,

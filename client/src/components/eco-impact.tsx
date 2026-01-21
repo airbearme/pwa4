@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Leaf, Sun, Users } from "lucide-react";
+import { Leaf, Sun, Users, Play } from "lucide-react";
 
 export default function EcoImpact() {
   const impactData = [
@@ -209,7 +209,7 @@ export default function EcoImpact() {
                 className="eco-gradient text-white hover-lift animate-pulse-glow ripple-effect"
                 data-testid="button-start-challenge"
               >
-                <i className="fas fa-play mr-3"></i>
+                <Play className="mr-3 h-4 w-4" />
                 Start Challenge
               </Button>
             </CardContent>

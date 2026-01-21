@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Production PWA Tests', () => {
-    const SITE_URL = 'https://airbear.me';
+    const SITE_URL = process.env.PLAYWRIGHT_SITE_URL || 'http://localhost:5000';
 
     test.beforeEach(async ({ page }) => {
         await page.goto(SITE_URL);
@@ -9,7 +9,7 @@ test.describe('Production PWA Tests', () => {
 
     test('Should load the homepage and show correct title', async ({ page }) => {
         await expect(page).toHaveTitle(/AirBear/i);
-        await expect(page.locator('#root')).toBeVisible();
+        await expect(page.locator('#root')).toBeVisible({ timeout: 10000 });
     });
 
     test('Should show install prompt or installation instructions', async ({ page }) => {
@@ -23,8 +23,9 @@ test.describe('Production PWA Tests', () => {
     test('Should enable PWA Service Worker', async ({ page }) => {
         const isServiceWorkerReady = await page.evaluate(async () => {
             if (!('serviceWorker' in navigator)) return false;
-            const registration = await navigator.serviceWorker.ready;
-            return !!registration;
+            const ready = navigator.serviceWorker.ready.then(() => true).catch(() => false);
+            const timeout = new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 5000));
+            return await Promise.race([ready, timeout]);
         });
         // Note: ready promise might take time or strictly require https
         // We just check if navigator.serviceWorker exists essentially

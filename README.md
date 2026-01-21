@@ -117,7 +117,7 @@ npm start
 ```env
 # Supabase Auth (required for email + Google/Apple login)
 SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+SUPABASE_SECRET_KEY=your-supabase-secret-key
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
 
@@ -136,31 +136,12 @@ PORT=5000
 
 ## 🚀 Deployment Options
 
-### IONOS SFTP Deployment
-1. **Set up Environment Variables**:
-   - Ensure your `.env` file includes IONOS SFTP credentials:
-     ```env
-     IONOS_SFTP_HOST=access-5018328928.webspace-host.com
-     IONOS_SFTP_USER=your_sftp_username
-     IONOS_SFTP_PASSWORD=your_sftp_password
-     ```
+### Vercel Deployment (Recommended)
+1. **Connect Repo**: Import this project into Vercel.
+2. **Set Environment Variables**: Add the Supabase + Stripe keys from above.
+3. **Deploy**: Vercel will run `npm run vercel-build` and serve the app.
 
-2. **Build and Deploy**:
-   ```bash
-   npm run deploy:ionos
-   ```
-
-   This script will:
-   - Build the production version
-   - Create a deployment package
-   - Upload to your IONOS SFTP server
-   - Verify PWA features
-
-   To push to `airbear.me`, set your IONOS `.env` values (host/user/password) and ensure the build includes the live Supabase + Stripe keys above.
-
-3. **Access Your Live App**:
-   - Visit `https://your-domain.com` (replace with your IONOS domain)
-   - The PWA will prompt for installation on mobile devices
+To use your domain, point DNS to Vercel (or set a 301/forward) and keep the app hosted on Vercel for both frontend and backend.
 
 ### Replit Static Deployment (Alternative)
 1. Open Deployments tab in Replit

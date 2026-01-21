@@ -82,7 +82,6 @@ The AirBear PWA project demonstrates a well-architected, feature-rich solar-powe
 - **Details**:
   - Successful production build completed
   - Vite build optimization working
-  - Deployment scripts for IONOS configured
   - **Bundle Size Concern**: 686KB main bundle (may benefit from code splitting)
 
 ---
