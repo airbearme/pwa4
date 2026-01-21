@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Link } from "wouter";
+import { Twitter, Instagram, Facebook, Linkedin } from "lucide-react";
 import RickshawWheel from "./airbear-wheel";
 
 export default function Footer() {
@@ -60,7 +61,7 @@ export default function Footer() {
                 whileTap={{ scale: 0.95 }}
                 data-testid="link-twitter"
               >
-                <i className="fab fa-twitter"></i>
+                <Twitter className="h-4 w-4" />
               </motion.a>
               <motion.a 
                 href="#" 
@@ -69,7 +70,7 @@ export default function Footer() {
                 whileTap={{ scale: 0.95 }}
                 data-testid="link-instagram"
               >
-                <i className="fab fa-instagram"></i>
+                <Instagram className="h-4 w-4" />
               </motion.a>
               <motion.a 
                 href="#" 
@@ -78,7 +79,7 @@ export default function Footer() {
                 whileTap={{ scale: 0.95 }}
                 data-testid="link-facebook"
               >
-                <i className="fab fa-facebook"></i>
+                <Facebook className="h-4 w-4" />
               </motion.a>
               <motion.a 
                 href="#" 
@@ -87,7 +88,7 @@ export default function Footer() {
                 whileTap={{ scale: 0.95 }}
                 data-testid="link-linkedin"
               >
-                <i className="fab fa-linkedin"></i>
+                <Linkedin className="h-4 w-4" />
               </motion.a>
             </div>
           </motion.div>

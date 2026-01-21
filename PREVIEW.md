@@ -154,7 +154,7 @@ firefox http://localhost:5000
 - Production build complete
 - All assets bundled
 - Service worker configured
-- Ready for IONOS deployment
+- Ready for Vercel deployment
 
 ---
 
@@ -178,13 +178,13 @@ firefox http://localhost:5000
 
 ### Target
 - **Domain**: airbear.me
-- **Host**: IONOS
-- **Method**: FTP upload
+- **Host**: Vercel
+- **Method**: Vercel deploy
 - **Status**: Ready to deploy
 
 ### Deployment Command
 ```bash
-npm run deploy:ionos
+npm run vercel-build
 ```
 
 ---
@@ -215,7 +215,7 @@ When you open the preview, expect to see:
 1. ✅ Preview the application locally
 2. ✅ Test all features and pages
 3. ✅ Verify animations and effects
-4. ⏳ Deploy to IONOS (airbear.me)
+4. ⏳ Deploy to Vercel (airbear.me)
 5. ⏳ Test production deployment
 
 ---

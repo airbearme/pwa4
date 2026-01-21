@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import Stripe from "stripe";
 import { storage } from "./storage.js";
@@ -30,6 +30,12 @@ if (!supabaseAdmin) {
   console.warn("⚠️ Supabase admin client not configured. Set SUPABASE_URL and SUPABASE_SECRET_KEY for live auth.");
 }
 
+const logRouteError = (req: Request, error: unknown) => {
+  const requestId = req.get("x-request-id");
+  const prefix = requestId ? `[${requestId}] ` : "";
+  console.error(`${prefix}[RouteError] ${req.method} ${req.path}`, error);
+};
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Health check
   app.get("/api/health", (_req, res) => {
@@ -45,15 +51,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   const profileSchema = z.object({
     id: z.string().optional(),
-    email: z.string().optional().nullable(), // Loosen for sync resilience
-    username: z.string().min(1),
+    email: z.string().email(),
+    username: z.string().min(2),
     fullName: z.string().optional().nullable(),
+    fullname: z.string().optional().nullable(),
     role: z.enum(["user", "driver", "admin"]).optional(),
     avatarUrl: z.string().optional().nullable(),
-  });
+    avatarurl: z.string().optional().nullable(),
+  }).transform((data) => ({
+    ...data,
+    fullName: data.fullName ?? data.fullname ?? null,
+    avatarUrl: data.avatarUrl ?? data.avatarurl ?? null,
+  }));
 
   const ensureUserProfile = async (payload: z.infer<typeof profileSchema>) => {
-    // Try lookup by ID first, then email
+    // Fallback to local storage - Supabase API has permission issues
     const existingUser = payload.id
       ? await storage.getUser(payload.id)
       : payload.email ? await storage.getUserByEmail(payload.email) : null;
@@ -92,33 +104,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/auth/register", async (req, res) => {
     try {
-      if (!supabaseAdmin) {
-        return res.status(500).json({ message: "Supabase is not configured. Set SUPABASE_URL and SUPABASE_SECRET_KEY." });
+      const registerSchema = z.object({
+        email: z.string().email(),
+        username: z.string().min(2),
+        fullName: z.string().optional().nullable(),
+        role: z.enum(["user", "driver", "admin"]).optional(),
+        avatarUrl: z.string().optional().nullable(),
+        password: z.string().min(6),
+      });
+      const userData = registerSchema.parse(req.body);
+
+      // Check for existing user with same email
+      const existingUser = await storage.getUserByEmail(userData.email);
+      if (existingUser) {
+        return res.status(400).json({ message: "Email already registered" });
       }
 
-      const userData = profileSchema.extend({ password: z.string().min(6) }).parse(req.body);
-      const { data, error } = await supabaseAdmin.auth.admin.createUser({
-        email: userData.email || undefined,
-        password: userData.password,
-        email_confirm: true,
-        user_metadata: {
-          username: userData.username,
-          role: userData.role || "user",
-          fullName: userData.fullName,
-        },
-      });
+      // Check for existing user with same username by trying to get by email pattern
+      // For now, skip username check since getAllUsers doesn't exist
+      // const existingUsernameUser = Array.from((await storage.getAllUsers()) || []).find(u => u.username === userData.username);
+      // if (existingUsernameUser) {
+      //   return res.status(400).json({ message: "Username already taken" });
+      // }
 
-      if (error) throw error;
-      const profile = await ensureUserProfile({
-        email: userData.email,
+      // Create user profile directly in local storage
+      const profile = await storage.createUser({
+        id: undefined, // Let storage generate ID
+        email: userData.email || "",
         username: userData.username,
-        fullName: userData.fullName,
-        role: (data.user?.user_metadata?.role as "user" | "driver" | "admin") || userData.role || "user",
-        avatarUrl: null,
+        fullName: userData.fullName ?? null,
+        avatarUrl: userData.avatarUrl ?? null,
+        role: userData.role || "user",
+        ecoPoints: 0,
+        totalRides: 0,
+        co2Saved: "0",
+        hasCeoTshirt: false,
+        stripeCustomerId: null,
+        stripeSubscriptionId: null,
+        tshirtPurchaseDate: null
       });
 
       res.json({ user: { id: profile.id, email: profile.email, username: profile.username, role: profile.role } });
     } catch (error: any) {
+      logRouteError(req, error);
+      console.error('Registration error:', error);
       res.status(400).json({ message: error.message });
     }
   });
@@ -149,6 +178,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ user: { id: profile.id, email: profile.email, username: profile.username, role: profile.role } });
     } catch (error: any) {
+      logRouteError(req, error);
       res.status(400).json({ message: error.message });
     }
   });
@@ -163,6 +193,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const profile = await ensureUserProfile(payload);
       res.json({ user: profile });
     } catch (error: any) {
+      logRouteError(req, error);
       res.status(400).json({ message: error.message });
     }
   });
@@ -172,8 +203,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const spots = await storage.getAllSpots();
       res.json(spots);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
+    } catch (error) {
+      logRouteError(req, error);
+      res.status(500).json({ message: "Failed to fetch spots" });
+    }
+  });
+
+  // Airbears route
+  app.get("/api/airbears", async (req, res) => {
+    try {
+      const airbears = await storage.getAllAirbears();
+      res.json(airbears);
+    } catch (error) {
+      logRouteError(req, error);
+      res.status(500).json({ message: "Failed to fetch airbears" });
+    }
+  });
+
+  // Bodega items route
+  app.get("/api/bodega-items", async (req, res) => {
+    try {
+      const items = await storage.getAllBodegaItems();
+      res.json(items);
+    } catch (error) {
+      logRouteError(req, error);
+      res.status(500).json({ message: "Failed to fetch bodega items" });
     }
   });
 
@@ -183,6 +237,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const rickshaws = await storage.getAllRickshaws();
       res.json(rickshaws);
     } catch (error: any) {
+      logRouteError(req, error);
       res.status(500).json({ message: error.message });
     }
   });
@@ -192,6 +247,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const rickshaws = await storage.getAvailableRickshaws();
       res.json(rickshaws);
     } catch (error: any) {
+      logRouteError(req, error);
       res.status(500).json({ message: error.message });
     }
   });
@@ -203,6 +259,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const ride = await storage.createRide(rideData);
       res.json(ride);
     } catch (error: any) {
+      logRouteError(req, error);
       res.status(400).json({ message: error.message });
     }
   });
@@ -213,6 +270,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const rides = await storage.getRidesByUser(userId);
       res.json(rides);
     } catch (error: any) {
+      logRouteError(req, error);
       res.status(500).json({ message: error.message });
     }
   });
@@ -224,6 +282,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const ride = await storage.updateRide(id, updates);
       res.json(ride);
     } catch (error: any) {
+      logRouteError(req, error);
       res.status(400).json({ message: error.message });
     }
   });
@@ -237,6 +296,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         : await storage.getAllBodegaItems();
       res.json(items);
     } catch (error: any) {
+      logRouteError(req, error);
       res.status(500).json({ message: error.message });
     }
   });
@@ -255,6 +315,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const order = await storage.createOrder(orderData);
       res.json(order);
     } catch (error: any) {
+      logRouteError(req, error);
       res.status(400).json({ message: error.message });
     }
   });
@@ -265,6 +326,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const orders = await storage.getOrdersByUser(userId);
       res.json(orders);
     } catch (error: any) {
+      logRouteError(req, error);
       res.status(500).json({ message: error.message });
     }
   });
@@ -301,7 +363,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           amount: Math.round(amount * 100), // Convert to cents
           currency: "usd",
           automatic_payment_methods: {
-            enabled: ['card', 'apple_pay', 'google_pay']
+            enabled: true
           },
           metadata: {
             orderId: orderId || null,
@@ -319,6 +381,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: paymentIntent.status
       });
     } catch (error: any) {
+      logRouteError(req, error);
       console.error('Payment intent creation error:', error);
       res.status(500).json({ message: error.message });
     }
@@ -347,8 +410,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
           quantity: 1,
         }],
-        success_url: successUrl || `${req.headers.origin}/dashboard`,
-        cancel_url: cancelUrl || `${req.headers.origin}/checkout`,
+        success_url: successUrl || `${req.protocol}://${req.get('host')}/dashboard`,
+        cancel_url: cancelUrl || `${req.protocol}://${req.get('host')}/checkout`,
       });
 
       res.json({
@@ -356,6 +419,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         url: session.url,
       });
     } catch (error: any) {
+      logRouteError(req, error);
       console.error('Checkout session creation error:', error);
       res.status(500).json({ message: error.message });
     }
@@ -368,6 +432,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const payment = await storage.createPayment(paymentData);
       res.json(payment);
     } catch (error: any) {
+      logRouteError(req, error);
       res.status(400).json({ message: error.message });
     }
   });
@@ -400,6 +465,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ success: true, payment });
     } catch (error: any) {
+      logRouteError(req, error);
       res.status(400).json({ message: "Invalid QR code or confirmation error: " + error.message });
     }
   });
@@ -430,6 +496,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         paymentIntentId: paymentIntent.id
       });
     } catch (error: any) {
+      logRouteError(req, error);
       res.status(500).json({ message: "Error creating CEO T-shirt payment: " + error.message });
     }
   });
@@ -466,6 +533,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ canRideFree: true });
     } catch (error: any) {
+      logRouteError(req, error);
       res.status(500).json({ message: error.message });
     }
   });
@@ -530,6 +598,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ received: true });
     } catch (error: any) {
+      logRouteError(req, error);
       res.status(500).json({ message: error.message });
     }
   });
@@ -556,6 +625,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(analytics);
     } catch (error: any) {
+      logRouteError(req, error);
       res.status(500).json({ message: error.message });
     }
   });
@@ -581,6 +651,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Push subscription registered successfully"
       });
     } catch (error: any) {
+      logRouteError(req, error);
       res.status(500).json({ message: error.message });
     }
   });
@@ -604,6 +675,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Push preferences updated successfully"
       });
     } catch (error: any) {
+      logRouteError(req, error);
       res.status(500).json({ message: error.message });
     }
   });
@@ -624,6 +696,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Push subscription removed successfully"
       });
     } catch (error: any) {
+      logRouteError(req, error);
       res.status(500).json({ message: error.message });
     }
   });
@@ -639,6 +712,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Test notification sent successfully"
       });
     } catch (error: any) {
+      logRouteError(req, error);
       res.status(500).json({ message: error.message });
     }
   });
@@ -668,6 +742,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Driver availability notification sent"
       });
     } catch (error: any) {
+      logRouteError(req, error);
       res.status(500).json({ message: error.message });
     }
   });

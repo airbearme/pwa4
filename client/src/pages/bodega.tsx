@@ -21,7 +21,13 @@ import {
   Star,
   Filter,
   Search,
-  X
+  X,
+  LayoutGrid,
+  Coffee,
+  Apple,
+  Cookie,
+  ShoppingBag,
+  Image
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -79,11 +85,11 @@ export default function Bodega() {
   });
 
   const categories = [
-    { id: "all", name: "All", icon: "fas fa-grid-2" },
-    { id: "beverages", name: "Beverages", icon: "fas fa-coffee" },
-    { id: "food", name: "Food", icon: "fas fa-apple-alt" },
-    { id: "snacks", name: "Snacks", icon: "fas fa-cookie-bite" },
-    { id: "accessories", name: "Accessories", icon: "fas fa-shopping-bag" },
+    { id: "all", name: "All", Icon: LayoutGrid },
+    { id: "beverages", name: "Beverages", Icon: Coffee },
+    { id: "food", name: "Food", Icon: Apple },
+    { id: "snacks", name: "Snacks", Icon: Cookie },
+    { id: "accessories", name: "Accessories", Icon: ShoppingBag },
   ];
 
   const filteredItems = items?.filter(item => {
@@ -231,7 +237,7 @@ export default function Bodega() {
                   className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
                   data-testid={`tab-${category.id}`}
                 >
-                  <i className={`${category.icon} mr-2 text-sm`}></i>
+                  <category.Icon className="mr-2 h-4 w-4" />
                   <span className="hidden sm:inline">{category.name}</span>
                 </TabsTrigger>
               ))}
@@ -269,7 +275,7 @@ export default function Bodega() {
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <i className="fas fa-image text-4xl text-muted-foreground"></i>
+                          <Image className="h-10 w-10 text-muted-foreground" />
                         </div>
                       )}
                       

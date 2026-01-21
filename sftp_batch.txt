@@ -1,1 +1,0 @@
-put -r /home/steve/Projects/pwa4/dist/public/* /public_html/

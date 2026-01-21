@@ -8,7 +8,7 @@ import AirbearAvatar from "@/components/airbear-avatar";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { getSupabaseClient } from "@/lib/supabase-client";
-import { Loader2, Crown } from "lucide-react";
+import { Loader2, Crown, Play, Leaf, Store, Route, Map } from "lucide-react";
 import { useState } from "react";
 
 // Types for API responses
@@ -207,7 +207,7 @@ export default function Home() {
                 window.open('https://facebook.com/airbearme', '_blank');
               }}
             >
-              <i className="fas fa-play mr-3"></i>
+              <Play className="mr-3 h-4 w-4" />
               Watch Demo
             </Button>
           </motion.div>
@@ -276,7 +276,7 @@ export default function Home() {
               <Card className="glass-morphism hover-lift h-full" data-testid="card-eco-friendly">
                 <CardContent className="p-6">
                   <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i className="fas fa-leaf text-emerald-500 text-2xl"></i>
+                    <Leaf className="h-6 w-6 text-emerald-500" />
                   </div>
                   <h3 className="text-xl font-semibold text-foreground mb-3 text-center">
                     100% Eco-Friendly
@@ -297,7 +297,7 @@ export default function Home() {
               <Card className="glass-morphism hover-lift h-full" data-testid="card-mobile-bodega">
                 <CardContent className="p-6">
                   <div className="w-16 h-16 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i className="fas fa-store text-amber-500 text-2xl"></i>
+                    <Store className="h-6 w-6 text-amber-500" />
                   </div>
                   <h3 className="text-xl font-semibold text-foreground mb-3 text-center">
                     Mobile Bodega
@@ -318,7 +318,7 @@ export default function Home() {
               <Card className="glass-morphism hover-lift h-full" data-testid="card-smart-routing">
                 <CardContent className="p-6">
                   <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i className="fas fa-route text-primary text-2xl"></i>
+                    <Route className="h-6 w-6 text-primary" />
                   </div>
                   <h3 className="text-xl font-semibold text-foreground mb-3 text-center">
                     Smart AirBear Routing
@@ -372,7 +372,7 @@ export default function Home() {
                   className="border-2 border-white text-white hover:bg-white/10 px-8 py-4 text-lg font-semibold hover-lift"
                   data-testid="button-explore-map"
                 >
-                  <i className="fas fa-map mr-3"></i>
+                  <Map className="mr-3 h-4 w-4" />
                   Explore Map
                 </Button>
               </Link>

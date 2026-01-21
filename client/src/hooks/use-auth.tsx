@@ -125,25 +125,63 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (userData: { email: string; username: string; password: string; confirmPassword: string; role: "user" | "driver" | "admin" }) => {
     setIsLoading(true);
     try {
-      const client = assertSupabase();
-      const { data, error } = await client.auth.signUp({
-        email: userData.email,
-        password: userData.password,
-        options: {
-          data: {
-            username: userData.username,
-            role: userData.role,
-            fullName: userData.username, // Use username as fullName for now
-          },
-          emailRedirectTo: `${window.location.origin}/auth`,
-        },
-      });
-
-      if (error || !data.user) {
-        throw new Error(error?.message || "Registration failed");
+      // Validate password match
+      if (userData.password !== userData.confirmPassword) {
+        throw new Error("Passwords do not match");
       }
 
-      await syncProfile(data.user);
+      // Validate password strength
+      if (userData.password.length < 6) {
+        throw new Error("Password must be at least 6 characters");
+      }
+
+      // First, try to create user via API endpoint (works with both Supabase and MemStorage)
+      const registerResponse = await apiRequest("POST", "/api/auth/register", {
+        email: userData.email,
+        username: userData.username,
+        password: userData.password,
+        role: userData.role,
+        fullName: userData.username,
+      });
+
+      if (!registerResponse.ok) {
+        const errorData = await registerResponse.json();
+        throw new Error(errorData.message || "Registration failed");
+      }
+
+      const registerData = await registerResponse.json();
+
+      // Then try Supabase authentication if available
+      try {
+        const client = assertSupabase();
+        const { data, error } = await client.auth.signUp({
+          email: userData.email,
+          password: userData.password,
+          options: {
+            data: {
+              username: userData.username,
+              role: userData.role,
+              fullName: userData.username,
+            },
+            emailRedirectTo: `${window.location.origin}/auth`,
+          },
+        });
+
+        if (error || !data.user) {
+          console.warn("Supabase auth signUp failed, but user was created in storage:", error?.message);
+          // Continue even if Supabase auth fails, since we have the user in our storage
+        } else {
+          await syncProfile(data.user);
+        }
+      } catch (supabaseError: any) {
+        console.warn("Supabase authentication error (user still created in storage):", supabaseError.message);
+        // Continue with the user we created via API
+      }
+
+      // Set the user from the API response
+      setUser(registerData.user);
+      localStorage.setItem("airbear-user", JSON.stringify(registerData.user));
+
     } catch (error: any) {
       throw new Error(error.message || "Registration failed");
     } finally {

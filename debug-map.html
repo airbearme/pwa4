@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AirBear Map Debug</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
+        #map { height: 100vh; width: 100%; }
+        .debug-info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 1000;
+            max-width: 300px;
+        }
+        .status { font-weight: bold; }
+        .success { color: green; }
+        .error { color: red; }
+        .warning { color: orange; }
+    </style>
+</head>
+<body>
+    <div class="debug-info">
+        <h3>AirBear Map Debug</h3>
+        <div id="status">Initializing...</div>
+        <div id="spots">Loading spots...</div>
+        <div id="tiles">Checking tiles...</div>
+    </div>
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const statusEl = document.getElementById('status');
+        const spotsEl = document.getElementById('spots');
+        const tilesEl = document.getElementById('tiles');
+
+        function updateStatus(message, type = 'success') {
+            statusEl.innerHTML = `<span class="status ${type}">${message}</span>`;
+        }
+
+        function updateSpots(count) {
+            spotsEl.innerHTML = `<span class="status success">Spots loaded: ${count}</span>`;
+        }
+
+        function updateTiles(status) {
+            tilesEl.innerHTML = `<span class="status ${status}">Map tiles: ${status}</span>`;
+        }
+
+        // Initialize map
+        try {
+            updateStatus('Loading Leaflet...', 'warning');
+            
+            const map = L.map('map', {
+                center: [42.0987, -75.9179], // Binghamton coordinates
+                zoom: 12,
+                zoomControl: true
+            });
+
+            updateStatus('Adding tile layer...', 'warning');
+
+            // Add tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 19
+            }).on('tileload', function() {
+                updateTiles('Loading');
+            }).on('tileerror', function() {
+                updateTiles('Error loading tiles');
+            }).on('load', function() {
+                updateTiles('Loaded successfully');
+            }).addTo(map);
+
+            updateStatus('Loading AirBear spots...', 'warning');
+
+            // Load spots from API
+            fetch('https://pwa41.vercel.app/api/spots')
+                .then(response => response.json())
+                .then(spots => {
+                    console.log('Loaded spots:', spots);
+                    updateSpots(spots.length);
+                    
+                    // Add spot markers
+                    spots.forEach(spot => {
+                        const marker = L.marker([spot.latitude, spot.longitude])
+                            .addTo(map)
+                            .bindPopup(`<b>${spot.name}</b><br>${spot.description || ''}<br><small>Lat: ${spot.latitude}, Lon: ${spot.longitude}</small>`);
+                    });
+
+                    updateStatus(`Map ready with ${spots.length} spots!`, 'success');
+                })
+                .catch(error => {
+                    console.error('Error loading spots:', error);
+                    updateStatus('Error loading spots', 'error');
+                    updateSpots(0);
+                });
+
+        } catch (error) {
+            console.error('Map initialization error:', error);
+            updateStatus('Map initialization failed', 'error');
+        }
+    </script>
+</body>
+</html>

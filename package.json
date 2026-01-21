@@ -9,8 +9,6 @@
     "build:static": "vite build",
     "vercel-build": "node scripts/check-env.js && npm run build",
     "start": "NODE_ENV=production node dist/index.js",
-    "deploy:ionos": "node scripts/deploy-ionos.js",
-    "deploy:public": "node scripts/deploy-public.js",
     "check": "tsc",
     "db:push": "drizzle-kit push",
     "test:e2e": "wait-on http://localhost:5000 && npx playwright test"
