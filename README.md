@@ -31,7 +31,7 @@ AirBear is a revolutionary solar-powered ride-sharing platform featuring eco-fri
 - **Motion Effects**: 3D tilts, ripples, glitches, vortexes, morphs
 - **Performance**: 60fps optimized, low-power mode support
 
-## 🚀 **AirBear Slogans**
+## 🚀 **AirBear Slogans** 🚀
 
 - *"AirBear flair, ride without a care—solar power in the air!"*
 - *"Glide with AirBear, eco-rides so rare!"*  
