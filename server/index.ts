@@ -40,27 +40,21 @@ app.use(
         defaultSrc: ["'self'"],
         scriptSrc: [
           "'self'",
-          "'unsafe-inline'",
-          "'unsafe-eval'",
           "https://js.stripe.com",
           "https://unpkg.com",
-          "https://vercel.live",
-          "https://*.facebook.com"
+          ...(process.env.NODE_ENV === 'development' ? ["'unsafe-inline'", "'unsafe-eval'"] : []),
         ],
         scriptSrcElem: [
           "'self'",
-          "'unsafe-inline'",
-          "'unsafe-eval'",
-          "https://js.stripe.com",
+          "https.js.stripe.com",
           "https://unpkg.com",
-          "https://vercel.live",
-          "https://*.facebook.com"
+          ...(process.env.NODE_ENV === 'development' ? ["'unsafe-inline'", "'unsafe-eval'"] : []),
         ],
         styleSrc: [
           "'self'",
-          "'unsafe-inline'",
           "https://unpkg.com",
-          "https://fonts.googleapis.com"
+          "https://fonts.googleapis.com",
+          ...(process.env.NODE_ENV === 'development' ? ["'unsafe-inline'"] : []),
         ],
         imgSrc: [
           "'self'",
