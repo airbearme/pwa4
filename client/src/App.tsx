@@ -5,24 +5,24 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ThemeProvider } from "next-themes";
-import { Suspense } from "react";
+import { Suspense, lazy } from "react";
 
 // Pages
-import Home from "@/pages/home";
-import Auth from "@/pages/auth";
-import Dashboard from "@/pages/dashboard";
-import Map from "@/pages/map";
-import Bodega from "@/pages/bodega";
-import Checkout from "@/pages/checkout";
-import Promo from "@/pages/promo";
-import Support from "@/pages/support";
-import Safety from "@/pages/safety";
-import Privacy from "@/pages/privacy";
-import Terms from "@/pages/terms";
-import Challenges from "@/pages/challenges";
-import Rewards from "@/pages/rewards";
-import DriverDashboard from "@/pages/driver-dashboard";
-import NotFound from "@/pages/not-found";
+const Home = lazy(() => import("@/pages/home"));
+const Auth = lazy(() => import("@/pages/auth"));
+const Dashboard = lazy(() => import("@/pages/dashboard"));
+const Map = lazy(() => import("@/pages/map"));
+const Bodega = lazy(() => import("@/pages/bodega"));
+const Checkout = lazy(() => import("@/pages/checkout"));
+const Promo = lazy(() => import("@/pages/promo"));
+const Support = lazy(() => import("@/pages/support"));
+const Safety = lazy(() => import("@/pages/safety"));
+const Privacy = lazy(() => import("@/pages/privacy"));
+const Terms = lazy(() => import("@/pages/terms"));
+const Challenges = lazy(() => import("@/pages/challenges"));
+const Rewards = lazy(() => import("@/pages/rewards"));
+const DriverDashboard = lazy(() => import("@/pages/driver-dashboard"));
+const NotFound = lazy(() => import("@/pages/not-found"));
 
 // Components
 import Header from "@/components/header";
