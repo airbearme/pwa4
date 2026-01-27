@@ -1,6 +1,6 @@
 # AirBear PWA - Production Environment Setup Guide
 
-## =€ Quick Start for Live Production
+## =ï¿½ Quick Start for Live Production
 
 ### 1. Set Environment Variables in Vercel
 
@@ -15,10 +15,10 @@ STRIPE_SECRET_KEY=sk_live_your_real_key
 STRIPE_WEBHOOK_SECRET=whsec_your_real_key
 
 # Supabase Configuration
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=your_anon_key
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SECRET_KEY=your_service_role_key
+VITE_SUPABASE_URL=https://your-project-ref.supabase.co
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
 # Application Configuration
 NODE_ENV=production
@@ -39,7 +39,7 @@ npx vercel --prod --force
 curl https://pwa41.vercel.app/api/health
 
 # Should return:
-# {"status":"ok","supabaseUrl":"configured","supabaseSecretKey":"configured","stripeSecretKey":"configured"}
+# {"status":"ok","supabaseUrl":"configured","supabaseServiceRoleKey":"configured","stripeSecretKey":"configured"}
 ```
 
 ## =' Environment Configuration Options
@@ -60,7 +60,7 @@ curl https://pwa41.vercel.app/api/health
 - Application uses MemStorage for missing services
 - Partial functionality
 
-## =Ë Environment Variable Reference
+## =ï¿½ Environment Variable Reference
 
 | Variable | Purpose | Required | Fallback |
 |----------|---------|----------|----------|
@@ -68,27 +68,27 @@ curl https://pwa41.vercel.app/api/health
 | `STRIPE_SECRET_KEY` | Stripe secret key |  | Test mode |
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook |  | Test mode |
 | `VITE_SUPABASE_URL` | Supabase URL |  | MemStorage |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase anon key |  | MemStorage |
+| `VITE_SUPABASE_ANON_KEY` | Supabase anon key |  | MemStorage |
 | `SUPABASE_URL` | Supabase URL (server) |  | MemStorage |
-| `SUPABASE_SECRET_KEY` | Supabase service key |  | MemStorage |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service key |  | MemStorage |
 | `NODE_ENV` | Environment mode |  | development |
 | `USE_MOCK_DATABASE` | Force mock database | L | false |
 
-## <¯ Storage System Behavior
+## <ï¿½ Storage System Behavior
 
 ```javascript
-// Production with real credentials ’ SupabaseStorage (real database)
-// Development or missing credentials ’ MemStorage (in-memory)
+// Production with real credentials ï¿½ SupabaseStorage (real database)
+// Development or missing credentials ï¿½ MemStorage (in-memory)
 // Automatic fallback prevents deployment failures
 ```
 
-## =Ê Deployment Status
+## =ï¿½ Deployment Status
 
 **Current Status:**
 -  Code fully implemented and tested
 -  Local development working perfectly
 -  Environment checks configured
-- ó Waiting for Vercel environment variables
+- ï¿½ Waiting for Vercel environment variables
 
 **Next Steps:**
 1. Add real credentials to Vercel dashboard
@@ -103,4 +103,4 @@ curl https://pwa41.vercel.app/api/health
 - **API Health:** https://pwa41.vercel.app/api/health
 - **Auth Page:** https://pwa41.vercel.app/auth
 
-The application is ready for production! Just add the environment variables and deploy. =€
+The application is ready for production! Just add the environment variables and deploy. =ï¿½

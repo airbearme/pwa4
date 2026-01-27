@@ -498,10 +498,6 @@ class FinalValidationTests {
       } catch (error) {
         throw new Error('Service worker not accessible');
       }
-    });
-  }
-
-  static async testOAuthAvailability() {
     return FinalTestUtils.measureTime('OAuth Availability', async () => {
       // Test that auth page loads (which should have OAuth buttons)
       try {

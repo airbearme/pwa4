@@ -101,7 +101,7 @@ Expected response:
 {
   "status": "ok",
   "supabaseUrl": "configured",
-  "supabaseSecretKey": "configured",
+  "supabaseServiceRoleKey": "configured",
   "stripeSecretKey": "configured"
 }
 ```

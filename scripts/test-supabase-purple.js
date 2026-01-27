@@ -1,34 +1,29 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://your-project-ref.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0b212bXltZmNqc3d2eHVjbGlpIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTU4Mzk3MywiZXhwIjoyMDcxMTU5OTczfQ.gbAh5_qDmUWiG65qHGUme9RyKOQmLB25LGkSfRw7_BA';
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-console.log('🔌 Testing Purple Zebra connection...');
-console.log('URL:', supabaseUrl);
+if (!supabaseUrl || !supabaseServiceRoleKey) {
+  console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in the environment.');
+  process.exit(1);
+}
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+console.log('Testing Supabase admin access...');
+
+const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
 async function test() {
   try {
-    console.log('Attempting auth check...');
     const { data, error } = await supabase.auth.admin.listUsers();
-    
+
     if (error) {
-      console.log('❌ Auth Error:', error.message);
-      console.log('Error details:', JSON.stringify(error, null, 2));
+      console.log('Auth error:', error.message);
     } else {
-      console.log('✅ SUCCESS! Connected to Purple Zebra');
-      console.log('Users found:', data.users.length);
+      console.log('Connected. Users found:', data.users.length);
     }
   } catch (e) {
-    console.log('❌ Exception:', e.message);
+    console.log('Exception:', e.message);
   }
 }
-
-// Retry with delay
-setTimeout(() => {
-  console.log('\nRetrying after 5 seconds...');
-  test();
-}, 5000);
 
 test();

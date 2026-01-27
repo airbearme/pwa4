@@ -1,32 +1,34 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://your-project-ref.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZrcHZtZWZiY2tweXByZGdtb3pqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MDIzMjA1MywiZXhwIjoyMDc1ODA4MDUzfQ.kFtaA-NX0fiqQ6GzejEhEsZvi8ze5fopd-2kAnBfzMI';
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-console.log('Testing connection to:', supabaseUrl);
+if (!supabaseUrl || !supabaseServiceRoleKey) {
+  console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in the environment.');
+  process.exit(1);
+}
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+console.log('Testing Supabase connection to:', supabaseUrl);
+
+const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
 async function check() {
   try {
-    // Try to list tables (requires admin/pg rights usually, or just check a public table)
-    // We'll check 'spots'
     const { data, error } = await supabase.from('spots').select('*').limit(1);
-    
+
     if (error) {
-      console.log('❌ Error querying spots:', error.message);
-      // Try authentication check
-       const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
-       if (authError) {
-           console.log('❌ Auth Admin check failed:', authError.message);
-       } else {
-           console.log('✅ Auth Admin check successful. Users found:', authData.users.length);
-       }
+      console.log('Error querying spots:', error.message);
+      const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
+      if (authError) {
+        console.log('Auth admin check failed:', authError.message);
+      } else {
+        console.log('Auth admin check successful. Users found:', authData.users.length);
+      }
     } else {
-      console.log('✅ Connected! Spots found:', data.length);
+      console.log('Connected. Spots found:', data.length);
     }
   } catch (e) {
-    console.error('❌ Unexpected error:', e);
+    console.error('Unexpected error:', e.message);
   }
 }
 
