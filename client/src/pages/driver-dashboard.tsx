@@ -216,7 +216,7 @@ export default function DriverDashboard() {
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <span className="text-muted-foreground">Type</span>
-                                    <span className="font-medium">Solar-Powered Rickshaw</span>
+                                    <span className="font-medium">Solar-Powered AirBear</span>
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <span className="text-muted-foreground">Status</span>

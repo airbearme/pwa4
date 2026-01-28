@@ -21,7 +21,7 @@ function App() {
         backdropFilter: 'blur(10px)'
       }}>
         <h1 style={{ fontSize: '4rem', margin: '0 0 20px 0' }}>🐻 AirBear</h1>
-        <p style={{ fontSize: '1.5rem', margin: '0 0 20px 0' }}>Solar Rickshaw Ride Share</p>
+        <p style={{ fontSize: '1.5rem', margin: '0 0 20px 0' }}>Eco Transportation</p>
         <div style={{
           background: 'rgba(255,255,255,0.2)',
           padding: '20px',

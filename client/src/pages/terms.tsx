@@ -12,7 +12,7 @@ export default function Terms() {
     {
       icon: Shield,
       title: "2. Service Description",
-      content: `AirBear provides solar-powered rickshaw transportation services and mobile bodega shopping experiences in Binghamton, NY. Our Services include ride booking, real-time tracking, payment processing, and access to local products through our mobile bodega platform. We reserve the right to modify, suspend, or discontinue any aspect of our Services at any time without prior notice.`
+      content: `AirBear provides solar-powered AirBear transportation services and mobile bodega shopping experiences in Binghamton, NY. Our Services include ride booking, real-time tracking, payment processing, and access to local products through our mobile bodega platform. We reserve the right to modify, suspend, or discontinue any aspect of our Services at any time without prior notice.`
     },
     {
       icon: Scale,
@@ -72,7 +72,7 @@ export default function Terms() {
           <Card className="glass-morphism border-primary/20">
             <CardContent className="p-6">
               <p className="text-muted-foreground leading-relaxed">
-                Welcome to AirBear! These Terms of Service ("Terms") govern your use of our solar-powered rickshaw transportation and mobile bodega services. By using AirBear, you enter into a legally binding agreement with AirBear Mobile Bodega, Inc. Please read these Terms carefully.
+                Welcome to AirBear! These Terms of Service ("Terms") govern your use of our solar-powered AirBear transportation and mobile bodega services. By using AirBear, you enter into a legally binding agreement with AirBear Mobile Bodega, Inc. Please read these Terms carefully.
               </p>
             </CardContent>
           </Card>
