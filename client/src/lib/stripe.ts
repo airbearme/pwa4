@@ -370,23 +370,6 @@ export const validateFreeRide = async (userId: string): Promise<{ canRideFree: b
   }
 };
 
-// Webhook signature verification helper
-export const verifyWebhookSignature = (
-  payload: string,
-  signature: string,
-  endpointSecret: string
-): boolean => {
-  try {
-    // This would typically be done on the server side
-    // Included here for completeness
-    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-    stripe.webhooks.constructEvent(payload, signature, endpointSecret);
-    return true;
-  } catch (error) {
-    return false;
-  }
-};
-
 // Payment method availability checks
 export const checkApplePayAvailability = async (): Promise<boolean> => {
   const stripe = await getStripe();
