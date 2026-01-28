@@ -8,7 +8,7 @@ interface AirbearWheelProps {
   effectType?: 'solar' | 'eco' | string;
 }
 
-export const AirbearWheel: React.FC<AirbearWheelProps> = ({
+export const AirbearWheel: React.FC<AirbearWheelProps> = React.memo(({
   size = 'md',
   className = '',
   glowing = false,
@@ -53,6 +53,6 @@ export const AirbearWheel: React.FC<AirbearWheelProps> = ({
       )}
     </div>
   );
-};
+});
 
 export default AirbearWheel;

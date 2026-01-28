@@ -1,0 +1,3 @@
+## 2024-05-23 - Atomic Commits
+**Learning:** Installing dependencies with `pnpm install` can generate a `pnpm-lock.yaml` file. Including this file in a commit for a specific, unrelated optimization violates the principle of atomic commits. It introduces noise, makes the change harder to review, and mixes dependency management with feature/performance work.
+**Action:** Always review the changed files before finalizing a commit. Exclude any files that are not directly related to the core task, especially auto-generated lock files. If a lock file needs to be updated or created, it should be done in a separate, dedicated commit.
