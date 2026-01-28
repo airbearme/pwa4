@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 
 interface Particle {
   id: number;
@@ -10,7 +10,7 @@ interface Particle {
   color: string;
 }
 
-export default function ParticleSystem() {
+function ParticleSystem() {
   const particles = useMemo(() => {
     const colors = ["#10b981", "#84cc16", "#f59e0b", "#22c55e"];
     return Array.from({ length: 20 }, (_, i) => ({
@@ -75,3 +75,8 @@ export default function ParticleSystem() {
     </div>
   );
 }
+
+// ⚡ Bolt: Memoize the component to prevent unnecessary re-renders from parent state changes.
+// This is a purely presentational component that doesn't accept props,
+// so it only needs to render once.
+export default memo(ParticleSystem);
