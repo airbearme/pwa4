@@ -32,36 +32,34 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: false }));
 
-// Security middleware with CSP
-app.use(
-  helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: [
-          "'self'",
-          "'unsafe-inline'",
-          "'unsafe-eval'",
-          "https://js.stripe.com",
-          "https://unpkg.com",
-          "https://vercel.live",
-          "https://*.facebook.com"
-        ],
-        scriptSrcElem: [
-          "'self'",
-          "'unsafe-inline'",
-          "'unsafe-eval'",
-          "https://js.stripe.com",
-          "https://unpkg.com",
-          "https://vercel.live",
-          "https://*.facebook.com"
-        ],
-        styleSrc: [
-          "'self'",
-          "'unsafe-inline'",
-          "https://unpkg.com",
-          "https://fonts.googleapis.com"
-        ],
+// Define lenient CSP for development
+const devCsp = {
+  directives: {
+    defaultSrc: ["'self'"],
+    scriptSrc: [
+      "'self'",
+      "'unsafe-inline'",
+      "'unsafe-eval'",
+      "https://js.stripe.com",
+      "https://unpkg.com",
+      "https://vercel.live",
+      "https://*.facebook.com"
+    ],
+    scriptSrcElem: [
+      "'self'",
+      "'unsafe-inline'",
+      "'unsafe-eval'",
+      "https://js.stripe.com",
+      "https://unpkg.com",
+      "https://vercel.live",
+      "https://*.facebook.com"
+    ],
+    styleSrc: [
+      "'self'",
+      "'unsafe-inline'",
+      "https://unpkg.com",
+      "https://fonts.googleapis.com"
+    ],
         imgSrc: [
           "'self'",
           "data:",
@@ -112,7 +110,39 @@ app.use(
         frameAncestors: ["'none'"],
         upgradeInsecureRequests: []
       }
-    },
+};
+
+// Define strict CSP for production
+const prodCsp = {
+  ...devCsp,
+  directives: {
+    ...devCsp.directives,
+    scriptSrc: [
+      "'self'",
+      "https://js.stripe.com",
+      "https://unpkg.com",
+      "https://vercel.live",
+      "https://*.facebook.com"
+    ],
+    scriptSrcElem: [
+      "'self'",
+      "https://js.stripe.com",
+      "https://unpkg.com",
+      "https://vercel.live",
+      "https://*.facebook.com"
+    ],
+    styleSrc: [
+      "'self'",
+      "https://unpkg.com",
+      "https://fonts.googleapis.com"
+    ],
+  }
+};
+
+// Security middleware with CSP
+app.use(
+  helmet({
+    contentSecurityPolicy: process.env.NODE_ENV === 'production' ? prodCsp : devCsp,
     crossOriginEmbedderPolicy: false,
   })
 );
