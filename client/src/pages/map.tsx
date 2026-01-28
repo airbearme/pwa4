@@ -39,7 +39,7 @@ interface Spot {
   isActive?: boolean;
 }
 
-interface Rickshaw {
+interface Airbear {
   id: string;
   currentSpotId: string;
   latitude: number;
@@ -105,11 +105,11 @@ export default function Map() {
     retry: 1,
   });
 
-  const { data: rickshawsQueryData = [], isLoading: rickshawLoading, error: rickshawError } = useQuery<Rickshaw[]>({
+  const { data: airbearsQueryData = [], isLoading: airbearLoading, error: airbearError } = useQuery<Airbear[]>({
     queryKey: ["airbears-initial"],
     queryFn: async () => {
       try {
-        const response = await fetch('/api/rickshaws');
+        const response = await fetch('/api/airbears');
         if (!response.ok) {
           return [];
         }
@@ -125,7 +125,7 @@ export default function Map() {
           heading: Number(item.heading ?? 0),
         }));
       } catch (error) {
-        console.error('Error fetching rickshaws:', error);
+        console.error('Error fetching airbears:', error);
         return [];
       }
     },
@@ -133,12 +133,12 @@ export default function Map() {
   });
 
   // Use the realtime hook for live updates
-  const realtimeRickshaws = useAirbearLocationUpdates();
+  const realtimeAirbears = useAirbearLocationUpdates();
 
   // Combine initial data with realtime updates
-  const rickshawsData = useMemo(() => {
-    if (realtimeRickshaws.length > 0) {
-      return realtimeRickshaws.map((item: any) => ({
+  const airbearsData = useMemo(() => {
+    if (realtimeAirbears.length > 0) {
+      return realtimeAirbears.map((item: any) => ({
         id: item.id,
         currentSpotId: item.current_spot_id ?? "",
         latitude: Number(item.latitude ?? 0),
@@ -149,8 +149,8 @@ export default function Map() {
         heading: Number(item.heading ?? 0),
       }));
     }
-    return rickshawsQueryData;
-  }, [realtimeRickshaws, rickshawsQueryData]);
+    return airbearsQueryData;
+  }, [realtimeAirbears, airbearsQueryData]);
 
   const activeSpots = useMemo(() => {
     if (spotsData.length > 0) {
@@ -163,9 +163,9 @@ export default function Map() {
     return [];
   }, [spotsData, spotsError]);
 
-  const rickshaws = useMemo(() => {
-    if (rickshawsData.length > 0) return rickshawsData;
-    if (rickshawError && activeSpots.length) {
+  const airbears = useMemo(() => {
+    if (airbearsData.length > 0) return airbearsData;
+    if (airbearError && activeSpots.length) {
       // Generate a lightweight fallback set tied to available spots
       return activeSpots.slice(0, 6).map((spot, index) => ({
         id: `fallback-${spot.id}-${index}`,
@@ -179,18 +179,18 @@ export default function Map() {
       }));
     }
     return [];
-  }, [rickshawsData, rickshawError, activeSpots]);
-  const availableAirbearsCount = rickshaws.filter(r => r.isAvailable).length;
+  }, [airbearsData, airbearError, activeSpots]);
+  const availableAirbearsCount = airbears.filter(r => r.isAvailable).length;
 
   useEffect(() => {
-    if (spotsError || rickshawError) {
+    if (spotsError || airbearError) {
       toast({
         title: "Live map unavailable",
         description: "Using offline map data. Live API unreachable; check your backend/Supabase settings for real-time data.",
         variant: "destructive",
       });
     }
-  }, [spotsError, rickshawError, toast]);
+  }, [spotsError, airbearError, toast]);
 
   // Initialize Leaflet map
   useEffect(() => {
@@ -276,7 +276,7 @@ export default function Map() {
 
   // Add markers to map
   useEffect(() => {
-    if (!mapInstanceRef.current || !activeSpots || !rickshaws || !mapReady) return;
+    if (!mapInstanceRef.current || !activeSpots || !airbears || !mapReady) return;
 
     const map = mapInstanceRef.current;
 
@@ -387,7 +387,7 @@ export default function Map() {
     });
 
     // Add real-time airbear markers
-    rickshaws.forEach((airbear) => {
+    airbears.forEach((airbear) => {
       const latitude = Number(airbear.latitude);
       const longitude = Number(airbear.longitude);
 
@@ -505,7 +505,7 @@ export default function Map() {
       }
     };
 
-  }, [activeSpots, rickshaws, mapReady]);
+  }, [activeSpots, airbears, mapReady]);
 
   const handleBookRide = async () => {
     if (!selectedSpot || !selectedDestination) {
@@ -561,7 +561,7 @@ export default function Map() {
     }
   };
 
-  if (mapLoading || spotsLoading || rickshawLoading) {
+  if (mapLoading || spotsLoading || airbearLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -602,7 +602,7 @@ export default function Map() {
         >
           <div className="flex items-center space-x-3">
             <div className="flex items-center space-x-2">
-              <RickshawWheel size="sm" className="text-primary" />
+              <AirbearAvatar size="sm" className="text-primary" />
               <span className="font-semibold text-emerald-700">Live Map Status</span>
             </div>
             <div className="hidden sm:flex items-center space-x-4 text-sm text-emerald-600">
@@ -640,14 +640,14 @@ export default function Map() {
                 <div className="flex items-center space-x-3">
                   <div className="w-4 h-4 bg-amber-500 rounded-full animate-pulse shadow-lg shadow-amber-500/50"></div>
                   <div>
-                    <div className="font-semibold text-amber-600">{rickshaws.filter(r => !r.isAvailable && !r.isCharging).length}</div>
+                    <div className="font-semibold text-amber-600">{airbears.filter(r => !r.isAvailable && !r.isCharging).length}</div>
                     <div className="text-xs text-muted-foreground">En Route</div>
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
                   <div className="w-4 h-4 bg-blue-500 rounded-full shadow-lg shadow-blue-500/50"></div>
                   <div>
-                    <div className="font-semibold text-blue-600">{rickshaws.filter(r => r.isCharging).length}</div>
+                    <div className="font-semibold text-blue-600">{airbears.filter(r => r.isCharging).length}</div>
                     <div className="text-xs text-muted-foreground">Charging</div>
                   </div>
                 </div>
@@ -667,7 +667,7 @@ export default function Map() {
             </div>
             <div className="flex items-center space-x-2 bg-card/60 rounded-lg px-4 py-2 border">
               <AirbearAvatar size="sm" showBadge={false} />
-              <span className="font-medium">AirBear mini-rickshaw marker</span>
+              <span className="font-medium">AirBear vehicle marker</span>
             </div>
           </div>
         </motion.div>
@@ -680,7 +680,7 @@ export default function Map() {
           transition={{ duration: 0.8, delay: 0.4 }}
         >
           {activeSpots.map((spot: Spot, index: number) => {
-            const availableAirbears = rickshaws.filter(r => r.currentSpotId === spot.id && r.isAvailable);
+            const availableAirbears = airbears.filter(r => r.currentSpotId === spot.id && r.isAvailable);
             const avgBattery = availableAirbears.length > 0
               ? Math.round(availableAirbears.reduce((sum, r) => sum + r.batteryLevel, 0) / availableAirbears.length)
               : 0;
@@ -705,7 +705,7 @@ export default function Map() {
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg flex items-center justify-between">
                       <span className="truncate">{spot.name}</span>
-                      <RickshawWheel
+                      <AirbearAvatar
                         size="sm"
                         animated={availableAirbears.length > 0}
                         className={availableAirbears.length > 0 ? "text-primary" : "text-muted-foreground"}
@@ -763,7 +763,7 @@ export default function Map() {
           <DialogContent className="max-w-md" data-testid="dialog-book-ride">
             <DialogHeader>
               <DialogTitle className="flex items-center">
-                <RickshawWheel size="sm" className="mr-2" />
+                <AirbearAvatar size="sm" className="mr-2" />
                 Book Your Ride (Demo)
               </DialogTitle>
             </DialogHeader>

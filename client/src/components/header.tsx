@@ -67,7 +67,6 @@ export default function Header() {
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 via-lime-500 to-amber-500 bg-clip-text text-transparent text-sm">
                   AirBear
                 </h1>
-                <p className="text-xs text-emerald-600 font-semibold animate-shimmer">Eco rides so rare! <span className="text-xs text-orange-500 font-bold">Powered by C4V Batteries ⚡</span></p>
               </div>
             </motion.div>
           </Link>
