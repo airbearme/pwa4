@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 
 interface Particle {
   id: number;
@@ -10,7 +10,7 @@ interface Particle {
   color: string;
 }
 
-export default function ParticleSystem() {
+const ParticleSystem = React.memo(function ParticleSystem() {
   const particles = useMemo(() => {
     const colors = ["#10b981", "#84cc16", "#f59e0b", "#22c55e"];
     return Array.from({ length: 20 }, (_, i) => ({
@@ -20,6 +20,16 @@ export default function ParticleSystem() {
       delay: Math.random() * 4,
       size: Math.random() * 4 + 2,
       color: colors[Math.floor(Math.random() * colors.length)],
+    }));
+  }, []);
+
+  // Memoize solar wind particles to prevent re-calculation on every render
+  const solarWindParticles = useMemo(() => {
+    return Array.from({ length: 8 }, (_, i) => ({
+      id: `solar-${i}`,
+      left: `${Math.random() * 100}%`,
+      top: `${Math.random() * 100}%`,
+      delay: i * 0.8,
     }));
   }, []);
 
@@ -51,13 +61,13 @@ export default function ParticleSystem() {
       ))}
       
       {/* Solar wind particles */}
-      {Array.from({ length: 8 }, (_, i) => (
+      {solarWindParticles.map((particle) => (
         <motion.div
-          key={`solar-${i}`}
+          key={particle.id}
           className="absolute w-1 h-1 bg-amber-400 rounded-full opacity-80"
           style={{
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 100}%`,
+            left: particle.left,
+            top: particle.top,
           }}
           animate={{
             x: [0, 100, 0],
@@ -67,11 +77,13 @@ export default function ParticleSystem() {
           transition={{
             duration: 6,
             repeat: Infinity,
-            delay: i * 0.8,
+            delay: particle.delay,
             ease: "linear",
           }}
         />
       ))}
     </div>
   );
-}
+});
+
+export default ParticleSystem;
