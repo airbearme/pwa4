@@ -1,11 +1,11 @@
 import { useEffect } from "react";
-import { useNavigate } from "wouter";
+import { useLocation } from "wouter";
 import { Loader2 } from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabase-client";
 import { useToast } from "@/hooks/use-toast";
 
 export default function OAuthCallback() {
-  const navigate = useNavigate();
+  const [, navigate] = useLocation();
   const { toast } = useToast();
 
   useEffect(() => {

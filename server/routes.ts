@@ -21,13 +21,13 @@ const getStripe = () => {
 };
 
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const supabaseAdmin = supabaseUrl && supabaseServiceRoleKey
-  ? createSupabaseAdminClient(supabaseUrl, supabaseServiceRoleKey, { auth: { autoRefreshToken: false } })
+const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY;
+const supabaseAdmin = supabaseUrl && supabaseSecretKey
+  ? createSupabaseAdminClient(supabaseUrl, supabaseSecretKey, { auth: { autoRefreshToken: false } })
   : null;
 
 if (!supabaseAdmin) {
-  console.warn("⚠️ Supabase admin client not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY for live auth.");
+  console.warn("⚠️ Supabase admin client not configured. Set SUPABASE_URL and SUPABASE_SECRET_KEY for live auth.");
 }
 
 const logRouteError = (req: Request, error: unknown) => {
@@ -43,7 +43,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       status: "ok",
       timestamp: new Date().toISOString(),
       supabaseUrl: supabaseUrl ? "configured" : "missing",
-      supabaseServiceRoleKey: supabaseServiceRoleKey ? "configured" : "missing",
+      supabaseSecretKey: supabaseSecretKey ? "configured" : "missing",
       stripeSecretKey: stripeSecretKey ? "configured" : "missing",
     });
   });
@@ -155,7 +155,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/login", async (req, res) => {
     try {
       if (!supabaseAdmin) {
-        return res.status(500).json({ message: "Supabase is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY." });
+        return res.status(500).json({ message: "Supabase is not configured. Set SUPABASE_URL and SUPABASE_SECRET_KEY." });
       }
 
       const { email, password } = z.object({
@@ -186,7 +186,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/sync-profile", async (req, res) => {
     try {
       if (!supabaseAdmin) {
-        return res.status(500).json({ message: "Supabase is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY." });
+        return res.status(500).json({ message: "Supabase is not configured. Set SUPABASE_URL and SUPABASE_SECRET_KEY." });
       }
 
       const payload = profileSchema.parse(req.body);

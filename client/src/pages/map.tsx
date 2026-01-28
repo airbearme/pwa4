@@ -289,7 +289,7 @@ export default function Map() {
 
     // Add spot markers
     activeSpots.forEach((spot: Spot, index: number) => {
-      const availableAirbears = rickshaws.filter(r => r.currentSpotId === spot.id && r.isAvailable);
+      const availableAirbears = airbears.filter(r => r.currentSpotId === spot.id && r.isAvailable);
       const hasAirbears = availableAirbears.length > 0;
       const spotNumber = index + 1;
       const latitude = Number(spot.latitude);
@@ -707,7 +707,6 @@ export default function Map() {
                       <span className="truncate">{spot.name}</span>
                       <AirbearAvatar
                         size="sm"
-                        animated={availableAirbears.length > 0}
                         className={availableAirbears.length > 0 ? "text-primary" : "text-muted-foreground"}
                       />
                     </CardTitle>

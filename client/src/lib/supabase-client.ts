@@ -11,6 +11,11 @@ let supabase: SupabaseClient | null = null;
  */
 export function getSupabaseClient(requireConfigured = false): SupabaseClient | null {
   if (!supabase && supabaseUrl && supabaseAnonKey) {
+    // Validate that the keys are not placeholder values
+    if (supabaseAnonKey.includes('sb_publishable_') || supabaseAnonKey.includes('sb_secret_')) {
+      console.warn('Using placeholder Supabase keys - please configure real environment variables');
+      return null;
+    }
     supabase = createClient(supabaseUrl, supabaseAnonKey);
   }
 
