@@ -8,7 +8,7 @@ import AirbearAvatar from "@/components/airbear-avatar";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { getSupabaseClient } from "@/lib/supabase-client";
-import { Loader2, Crown, Play, Leaf, Store, Route, Map } from "lucide-react";
+import { Loader2, Crown, Play, Leaf, Store, Route, Map, ExternalLink } from "lucide-react";
 import { useState } from "react";
 
 // Types for API responses
@@ -198,18 +198,23 @@ export default function Home() {
               CEO T-Shirt $100
             </Button>
 
-            <Button
-              variant="outline"
-              size="lg"
-              className="border-2 border-primary text-primary hover:bg-primary/10 px-8 py-4 text-lg font-semibold hover-lift ripple-effect"
-              data-testid="button-watch-demo"
-              onClick={() => {
-                window.open('https://facebook.com/airbearme', '_blank');
-              }}
+              <a
+                href="https://facebook.com/airbearme"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Watch Demo (opens in a new tab)"
             >
-              <Play className="mr-3 h-4 w-4" />
-              Watch Demo
-            </Button>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="border-2 border-primary text-primary hover:bg-primary/10 px-8 py-4 text-lg font-semibold hover-lift ripple-effect"
+                  data-testid="button-watch-demo"
+                >
+                  <Play className="mr-3 h-4 w-4" />
+                  Watch Demo
+                  <ExternalLink className="ml-2 h-4 w-4" />
+                </Button>
+              </a>
           </motion.div>
 
           {/* Stats */}
